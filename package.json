@@ -1,6 +1,7 @@
 {
     "name": "banyan",
     "version": "1.0.0",
+    "homepage": "https://nnchaudhuri.github.io/banyan",
     "private": true,
     "dependencies": {
       "react": "^18.2.0",
