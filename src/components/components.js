@@ -76,54 +76,6 @@ class Component {
     }
 }
 
-//define branch class
-class Branch extends Component {
-    constructor(name, lenBranch, thickness, radBranch, radHole, spacHole, lenSlot, numArcPts) {
-        super();
-
-        //initialize properties
-        this.name = name; //mesh name
-        this.lenBranch = lenBranch; //branch length from end hole to end hole
-        this.thickness = thickness; //branch thickness
-        this.radBranch = radBranch; //outer radius of branch profile
-        this.radHole = radHole; //radius of holes
-        this.spacHole = spacHole; //spacing between holes
-        this.lenSlot = lenSlot; //max length of slot hole
-        this.numArcPts = numArcPts; //# of points defining circle arc resolution
-
-        //create profile shape
-        const profile = pillShape(radBranch, lenBranch, 0, 0, numArcPts);
-
-        //create hole shapes
-        const holes = [];
-
-            //left circle hole is local origin
-            const leftHole = pillShape(radHole, 0, 0, 0, numArcPts);
-            holes.push(leftHole);
-
-            //slot holes, max length
-            let spacRem = lenBranch-2*spacHole;
-            let startSlot = spacHole;
-            while (spacRem >= lenSlot) {
-                const slotHole = pillShape(radHole, lenSlot, startSlot, 0, numArcPts);
-                holes.push(slotHole);
-                spacRem -= (lenSlot+spacHole);
-                startSlot += lenSlot+spacHole;
-            }
-
-            //slot holes, shorter
-            const slotHole = pillShape(radHole, spacRem, startSlot, 0, numArcPts);
-            holes.push(slotHole);
-
-            //right circle hole
-            const rightHole = pillShape(radHole, 0, lenBranch, 0, numArcPts);
-            holes.push(rightHole);
-
-        //extrude & create mesh
-        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon(name, {shape:profile, holes:holes, depth:thickness, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-    }
-}
-
 //define stem class
 class Stem extends Component {
     constructor(name, angleBend, lenStem, radStem, radFill, radConn, lenConn,  numArcPts, numFillPts) {
@@ -175,6 +127,101 @@ class Stem extends Component {
     }
 }
 
+//define branch class
+class Branch extends Component {
+    constructor(name, lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts) {
+        super();
+
+        //initialize properties
+        this.name = name; //mesh name
+        this.lenBranch = lenBranch; //branch length from end hole to end hole
+        this.thickBranch = thickBranch; //branch thickness
+        this.radBranch = radBranch; //outer radius of branch profile
+        this.radHole = radHole; //radius of holes
+        this.spacHole = spacHole; //center-to-center spacing between holes
+        this.lenSlot = lenSlot; //max length of slot hole
+        this.numArcPts = numArcPts; //# of points defining circle arc resolution
+
+        //create profile shape
+        const profile = pillShape(radBranch, lenBranch, 0, 0, numArcPts);
+
+        //create hole shapes
+        const holes = [];
+
+            //left circle hole is local origin
+            const leftHole = pillShape(radHole, 0, 0, 0, numArcPts);
+            holes.push(leftHole);
+
+            //slot holes, max length
+            let spacRem = lenBranch-2*spacHole;
+            let startSlot = spacHole;
+            while (spacRem >= lenSlot) {
+                const slotHole = pillShape(radHole, lenSlot, startSlot, 0, numArcPts);
+                holes.push(slotHole);
+                spacRem -= (lenSlot+spacHole);
+                startSlot += lenSlot+spacHole;
+            }
+
+            //slot holes, shorter
+            const slotHole = pillShape(radHole, spacRem, startSlot, 0, numArcPts);
+            holes.push(slotHole);
+
+            //right circle hole
+            const rightHole = pillShape(radHole, 0, lenBranch, 0, numArcPts);
+            holes.push(rightHole);
+
+        //extrude & create mesh
+        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon(name, {shape:profile, holes:holes, depth:thickBranch, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+    }
+}
+
+//define trunk class (tiles with ribs)
+class Trunk extends Component {
+    constructor(name, lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts) {
+        super();
+
+        //initialize properties
+        this.name = name; //mesh name
+        this.lenTrunk = lenTrunk; //trunk length from end hole to end hole
+        this.lenTile = lenTrunk+2*(2*radRib+overhang); //tile length
+        this.widthTile = widthTile; //tile width
+        this.thickTile = thickTile; //tile thickness
+        this.numRibs = numRibs; //# of ribs
+        this.thickRib = thickRib; //rib thickness
+        this.radRib = radRib; //outer radius of rib profile
+        this.spacRib = spacRib; //clear spacing between ribs
+        this.edgeRib = edgeRib; //tile side edge distance before first rib
+        this.radHole = radHole; //radius of holes
+        this.spacHole = spacHole; //center-to-center spacing between holes
+        this.overhang = overhang; //tile end edge distance overhanging rib end
+        this.numArcPts = numArcPts; //# of points defining circle arc resolution
+
+        const meshes = [];
+
+        //create tile
+        const rect = [
+            new BABYLON.Vector3(-2*radRib-overhang, 0, 0),
+            new BABYLON.Vector3(-2*radRib-overhang+this.lenTile, 0, 0),
+            new BABYLON.Vector3(-2*radRib-overhang+this.lenTile, 0, widthTile),
+            new BABYLON.Vector3(-2*radRib-overhang, 0, widthTile)
+        ];
+        const tile = BABYLON.MeshBuilder.ExtrudePolygon("tile", {shape:rect, depth:thickTile, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        tile.addRotation(Math.PI/2, 0, 0);
+        tile.translate(new BABYLON.Vector3(0, 0, 2*radRib), 1, BABYLON.Space.WORLD);
+        meshes.push(tile);
+
+        //create ribs
+
+
+        //meshes.push(rib);
+
+
+
+        //merge meshes
+        this.mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true, undefined, false, false);
+    }
+}
+
 //create scene
 const createScene = function () {
 	
@@ -185,13 +232,9 @@ const createScene = function () {
 	const light = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 50, 0));
 
 	//input properties
-    const lenBranch = 22; //branch length from end hole to end hole
-    const thickness = 1; //branch thickness
-    const radBranch = 1; //outer radius of branch profile
     const radHole = 0.25; //radius of holes
-    const spacHole = 2; //spacing between holes
-    const lenSlot = 6; //max length of slot hole
-
+    const spacHole = 2; //center-to-center spacing between holes
+    
     const angleBend = 90; //stem bend angle (in degrees)
     const lenStem = 4; //stem length from conn. to conn.
     const radStem = radHole; //outer radius of stem tube
@@ -199,14 +242,32 @@ const createScene = function () {
     const radConn = radStem/2; //radius of connection
     const lenConn = 0.5; //length of connection
 
+    const lenBranch = 22; //branch length from end hole to end hole
+    const thickBranch = 1; //branch thickness
+    const radBranch = 1; //outer radius of branch profile
+    const lenSlot = 6; //max length of slot hole
+
+    const lenTrunk = 22; //trunk length from end hole to end hole
+    const widthTile = 4; //tile width
+    const thickTile = 1; //tile thickness
+    const numRibs = 2; //# of ribs
+    const thickRib = 1; //rib thickness
+    const radRib = 1; //outer radius of rib profile
+    const spacRib = thickBranch; //clear spacing between ribs
+    const edgeRib = thickBranch; //tile side edge distance before first rib
+    const overhang = 1; //tile end edge distance overhanging rib end
+
     const numArcPts = 32; //# of points defining circle arc resolution
     const numFillPts = 32; //# of points defining fillet arc resolution
 
-    //create test branch
-    testBranch = new Branch("testBranch", lenBranch, thickness, radBranch, radHole, spacHole, lenSlot, numArcPts);
-
     //create test stem
     testStem = new Stem("testStem", angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts);
+
+    //create test branch
+    testBranch = new Branch("testBranch", lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts);
+
+    //create test trunk
+    testTrunk = new Trunk("testTrunk", lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts);
 
 	return scene;
 }
