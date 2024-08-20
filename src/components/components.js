@@ -80,21 +80,21 @@ class Component {
 
 //define branch class
 class Branch extends Component {
-    constructor(name, lenBody, thickness, radOut, radHole, spacHole, lenSlot, numArcPts) {
+    constructor(name, lenBranch, thickness, radBranch, radHole, spacHole, lenSlot, numArcPts) {
         super();
 
         //initialize properties
         this.name = name; //mesh name
-        this.lenBody = lenBody; //branch length from end hole to end hole
+        this.lenBranch = lenBranch; //branch length from end hole to end hole
         this.thickness = thickness; //branch thickness
-        this.radOut = radOut; //outer radius of branch profile
+        this.radBranch = radBranch; //outer radius of branch profile
         this.radHole = radHole; //radius of holes
         this.spacHole = spacHole; //spacing between holes
         this.lenSlot = lenSlot; //max length of slot hole
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
 
         //create profile shape
-        const profile = pillShape(radOut, lenBody, 0, 0, numArcPts);
+        const profile = pillShape(radBranch, lenBranch, 0, 0, numArcPts);
 
         //create hole shapes
         const holes = [];
@@ -104,7 +104,7 @@ class Branch extends Component {
             holes.push(leftHole);
 
             //slot holes, max length
-            let spacRem = lenBody-2*spacHole;
+            let spacRem = lenBranch-2*spacHole;
             let startSlot = spacHole;
             while (spacRem >= lenSlot) {
                 const slotHole = pillShape(radHole, lenSlot, startSlot, 0, numArcPts);
@@ -118,11 +118,43 @@ class Branch extends Component {
             holes.push(slotHole);
 
             //right circle hole
-            const rightHole = pillShape(radHole, 0, lenBody, 0, numArcPts);
+            const rightHole = pillShape(radHole, 0, lenBranch, 0, numArcPts);
             holes.push(rightHole);
 
         //extrude & create mesh
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon(name, {shape:profile, holes:holes, depth:thickness, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+    }
+}
+
+//define stem class
+class Stem extends Component {
+    constructor(name, lenStem, radStem, radConn, lenConn, numArcPts) {
+        super();
+
+        //initialize properties
+        this.name = name; //mesh name
+        this.lenStem = lenStem; //stem length from conn. to conn.
+        this.radStem = radStem; //outer radius of stem tube
+        this.radConn = radConn; //radius of connection
+        this.lenConn = lenConn; //length of connection
+        this.numArcPts = numArcPts; //# of points defining circle arc resolution
+
+        //create tube
+        const tubePath = [
+            new BABYLON.Vector3(0, 0, 0),
+            new BABYLON.Vector3(lenStem, 0, 0)
+        ];
+        var tube = BABYLON.MeshBuilder.CreateTube("tube", {path:tubePath, radius:radStem, tessellation:numArcPts, sideOrientation:BABYLON.Mesh.NO_CAP});
+
+        //create connections
+        const connPath = [
+            new BABYLON.Vector3(lenStem, 0, 0),
+            new BABYLON.Vector3(lenConn+lenStem, 0, 0)
+        ];
+        var maleConn = BABYLON.MeshBuilder.CreateTube("maleConn", {path:connPath, radius:radConn, tessellation:numArcPts, sideOrientation:BABYLON.Mesh.NO_CAP});
+
+        //merge meshes
+        this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn], true, true, undefined, false, false);
     }
 }
 
@@ -136,16 +168,25 @@ const createScene = function () {
 	const light = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 50, 0));
 
 	//input properties
-    const lenBody = 22; //branch length from end hole to end hole
+    const lenBranch = 22; //branch length from end hole to end hole
     const thickness = 1; //branch thickness
-    const radOut = 1; //outer radius of branch profile
+    const radBranch = 1; //outer radius of branch profile
     const radHole = 0.25; //radius of holes
     const spacHole = 2; //spacing between holes
     const lenSlot = 6; //max length of slot hole
+
+    const lenStem = 4; //stem length from conn. to conn.
+    const radStem = radHole; //outer radius of stem tube
+    const radConn = radStem/2; //radius of connection
+    const lenConn = 0.5; //length of connection
+
     const numArcPts = 32; //# of points defining circle arc resolution
 
     //create test branch
-    testBranch = new Branch("testBranch", lenBody, thickness, radOut, radHole, spacHole, lenSlot, numArcPts);
+    testBranch = new Branch("testBranch", lenBranch, thickness, radBranch, radHole, spacHole, lenSlot, numArcPts);
+
+    //create test stem
+    testStem = new Stem("testStem", lenStem, radStem, radConn, lenConn, numArcPts);
 
 	return scene;
 }
