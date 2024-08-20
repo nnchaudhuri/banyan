@@ -35,6 +35,9 @@ class Branch {
         this.spacHole = spacHole; //spacing between holes
         this.lenSlot = lenSlot; //max length of slot hole
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
+        this.x = 0; //x position (of left circle hole), initialize @ origin
+        this.y = 0; //y position (of left circle hole), initialize @ origin
+        this.z = 0; //z position (of left circle hole), initialize @ origin
 
         //create profile shape
         const profile = pillShape(radOut, lenBody, 0, 0, numArcPts);
@@ -52,8 +55,8 @@ class Branch {
             while (spacRem >= lenSlot) {
                 const slotHole = pillShape(radHole, lenSlot, startSlot, 0, numArcPts);
                 holes.push(slotHole);
-                spacRem = spacRem-(lenSlot+spacHole);
-                startSlot = startSlot+lenSlot+spacHole;
+                spacRem -= (lenSlot+spacHole);
+                startSlot += lenSlot+spacHole;
             }
 
             //slot holes, shorter
@@ -66,6 +69,18 @@ class Branch {
 
         //extrude & create mesh
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon(name, {shape:profile, holes:holes, depth:thickness, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+    }
+
+    //move branch (globally)
+    move(dx, dy, dz) {
+        
+        //update position properties
+        this.x += dx;
+        this.y += dy;
+        this.z += dz;
+
+        //move mesh
+        this.mesh.translate(new BABYLON.Vector3(dx, dy, dz), 1, BABYLON.Space.WORLD);
     }
 }
 
