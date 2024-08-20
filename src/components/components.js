@@ -144,17 +144,30 @@ class Stem extends Component {
             new BABYLON.Vector3(0, 0, 0),
             new BABYLON.Vector3(lenStem, 0, 0)
         ];
-        var tube = BABYLON.MeshBuilder.CreateTube("tube", {path:tubePath, radius:radStem, tessellation:numArcPts, sideOrientation:BABYLON.Mesh.NO_CAP});
+        var tube = BABYLON.MeshBuilder.CreateTube("tube", {path:tubePath, radius:radStem, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
-        //create connections
-        const connPath = [
+        //create male connection
+        const maleConnPath = [
             new BABYLON.Vector3(lenStem, 0, 0),
             new BABYLON.Vector3(lenConn+lenStem, 0, 0)
         ];
-        var maleConn = BABYLON.MeshBuilder.CreateTube("maleConn", {path:connPath, radius:radConn, tessellation:numArcPts, sideOrientation:BABYLON.Mesh.NO_CAP});
+        var maleConn = BABYLON.MeshBuilder.CreateTube("maleConn", {path:maleConnPath, radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+
+        //create female connection
+        const femConnPath = [
+            new BABYLON.Vector3(0, 0, 0),
+            new BABYLON.Vector3(lenConn, 0, 0)
+        ];
+        var femConn = BABYLON.MeshBuilder.CreateTube("femConn", {path:femConnPath, radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+
+        //create cap (on female end)
+        const circle = pillShape(radStem, 0, 0, 0, numArcPts);
+        const hole = [pillShape(radConn, 0, 0, 0, numArcPts)];
+        var cap = BABYLON.MeshBuilder.ExtrudePolygon("cap", {shape:circle, holes:hole, depth:0, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        cap.addRotation(0, 0, Math.PI/2);
 
         //merge meshes
-        this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn], true, true, undefined, false, false);
+        this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn, femConn, cap], true, true, undefined, false, false);
     }
 }
 
