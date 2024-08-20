@@ -99,6 +99,21 @@ class Branch {
         this.mesh.addRotation(0, ry, 0);
         this.mesh.addRotation(rx, 0, 0);
     }
+
+    //show branch
+    show() {
+        this.mesh.setEnabled(true);
+    }
+
+    //hide branch
+    hide() {
+        this.mesh.setEnabled(false);
+    }
+
+    //toggle branch visibility
+    toggleVis() {
+        this.mesh.setEnabled((this.mesh.isEnabled() ? false : true));
+    }
 }
 
 //create scene
