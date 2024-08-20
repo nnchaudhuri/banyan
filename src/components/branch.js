@@ -38,6 +38,9 @@ class Branch {
         this.x = 0; //x position (of left circle hole), initialize @ origin
         this.y = 0; //y position (of left circle hole), initialize @ origin
         this.z = 0; //z position (of left circle hole), initialize @ origin
+        this.ax = 0; //x rotation (about left circle hole), initialize as 0
+        this.ay = 0; //y rotation (about left circle hole), initialize as 0
+        this.az = 0; //z rotation (about left circle hole), initialize as 0
 
         //create profile shape
         const profile = pillShape(radOut, lenBody, 0, 0, numArcPts);
@@ -81,6 +84,20 @@ class Branch {
 
         //move mesh
         this.mesh.translate(new BABYLON.Vector3(dx, dy, dz), 1, BABYLON.Space.WORLD);
+    }
+
+    //rotate branch (about left circle hole)
+    rotate(rx, ry, rz) {
+
+        //update rotation properties
+        this.ax += rx;
+        this.ay += ry;
+        this.az += rz;
+
+        //rotate mesh
+        this.mesh.addRotation(0, 0, rz);
+        this.mesh.addRotation(0, ry, 0);
+        this.mesh.addRotation(rx, 0, 0);
     }
 }
 
