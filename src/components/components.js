@@ -96,7 +96,7 @@ class Stem extends Component {
         const tubePath = [
             new BABYLON.Vector3(0, 0, 0)
         ]
-        for (let i = 0; i <= numFillPts; i++) {
+        for (let i = 0; i <= numFillPts; i++) { //fillet arc
             tubePath.push(new BABYLON.Vector3(lenStem/2-radFill*Math.tan(angleBend*Math.PI/360)+radFill*Math.sin(i*angleBend*Math.PI/180/numFillPts), 0, radFill*(1-Math.cos(i*angleBend*Math.PI/180/numFillPts))));
         }
         tubePath.push(new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)));
@@ -211,11 +211,44 @@ class Trunk extends Component {
         meshes.push(tile);
 
         //create ribs
+        for (let j = 0; j < numRibs; j++) {
+            const profile = [];
 
+            //top left quarter-circle
+            for (let i = 0; i <= numArcPts/4; i++) {
+                profile.push(new BABYLON.Vector3(radRib*(-2+Math.sin(i*2*Math.PI/numArcPts)), 0, radRib*Math.cos(i*2*Math.PI/numArcPts)));
+            }
+            
+            //bottom left quarter-circle
+            for (let i = 1; i <= numArcPts/4; i++) {
+                profile.push(new BABYLON.Vector3(-radRib*Math.cos(i*2*Math.PI/numArcPts), 0, -radRib*Math.sin(i*2*Math.PI/numArcPts)));
+            }
 
-        //meshes.push(rib);
+            //flat edge
+            profile.push(new BABYLON.Vector3(lenTrunk, 0, -radRib));
 
+            //bottom right quarter-circle
+            for (let i = 1; i <= numArcPts/4; i++) {
+                profile.push(new BABYLON.Vector3(lenTrunk+radRib*Math.sin(i*2*Math.PI/numArcPts), 0, -radRib*Math.cos(i*2*Math.PI/numArcPts)));
+            }
 
+            //top right quarter-circle
+            for (let i = 1; i <= numArcPts/4; i++) {
+                profile.push(new BABYLON.Vector3(lenTrunk+radRib*(2-Math.cos(i*2*Math.PI/numArcPts)), 0, radRib*Math.sin(i*2*Math.PI/numArcPts)));
+            }
+
+            //holes
+            const holes = [];
+            for (let i = 0; i <= lenTrunk; i += spacHole) {
+                const hole = pillShape(radHole, 0, i, 0, numArcPts);
+                holes.push(hole);
+            }
+
+            //extrude & create mesh
+            const rib = BABYLON.MeshBuilder.ExtrudePolygon("rib", {shape:profile, holes:holes, depth:thickRib, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+            rib.translate(new BABYLON.Vector3(0, -edgeRib-j*(thickRib+spacRib), 0), 1, BABYLON.Space.WORLD);
+            meshes.push(rib);
+        }
 
         //merge meshes
         this.mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true, undefined, false, false);
