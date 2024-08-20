@@ -4,8 +4,7 @@ function pillShape(rad, len, startX, startZ, numArcPts) {
 
     //left semicircle edge
     for (let i = 0; i <= numArcPts/2; i++) {
-        const vec = new BABYLON.Vector3(startX+rad*Math.cos(Math.PI/2+i*2*Math.PI/numArcPts), 0, startZ+rad*Math.sin(Math.PI/2+i*2*Math.PI/numArcPts));
-        pill.push(vec);
+        pill.push(new BABYLON.Vector3(startX+rad*Math.cos(Math.PI/2+i*2*Math.PI/numArcPts), 0, startZ+rad*Math.sin(Math.PI/2+i*2*Math.PI/numArcPts)));
     }
 
     //flat edge
@@ -15,8 +14,7 @@ function pillShape(rad, len, startX, startZ, numArcPts) {
 
     //right semicircle edge
     for (let i = 0; i <= numArcPts/2; i++) {
-        const vec = new BABYLON.Vector3(startX+len+rad*Math.cos(-Math.PI/2+i*2*Math.PI/numArcPts), 0, startZ+rad*Math.sin(-Math.PI/2+i*2*Math.PI/numArcPts));
-        pill.push(vec);
+        pill.push(new BABYLON.Vector3(startX+len+rad*Math.cos(-Math.PI/2+i*2*Math.PI/numArcPts), 0, startZ+rad*Math.sin(-Math.PI/2+i*2*Math.PI/numArcPts)));
     }
 
     return pill;
@@ -128,7 +126,7 @@ class Branch extends Component {
 
 //define stem class
 class Stem extends Component {
-    constructor(name, angleBend, lenStem, radStem, radConn, lenConn, numArcPts) {
+    constructor(name, angleBend, lenStem, radStem, radFill, radConn, lenConn,  numArcPts, numFillPts) {
         super();
 
         //initialize properties
@@ -136,16 +134,20 @@ class Stem extends Component {
         this.angleBend = angleBend; //stem bend angle (in degrees)
         this.lenStem = lenStem; //stem length from conn. to conn.
         this.radStem = radStem; //outer radius of stem tube
+        this.radFill = radFill; //fillet radius of stem bend
         this.radConn = radConn; //radius of connection
         this.lenConn = lenConn; //length of connection
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
+        this.numFillPts = numFillPts; //# of points defining fillet arc resolution
 
         //create tube
         const tubePath = [
-            new BABYLON.Vector3(0, 0, 0),
-            new BABYLON.Vector3(lenStem/2, 0, 0),
-            new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180))
+            new BABYLON.Vector3(0, 0, 0)
         ]
+        for (let i = 0; i <= numFillPts; i++) {
+            tubePath.push(new BABYLON.Vector3(lenStem/2-radFill*Math.tan(angleBend*Math.PI/360)+radFill*Math.sin(i*angleBend*Math.PI/180/numFillPts), 0, radFill*(1-Math.cos(i*angleBend*Math.PI/180/numFillPts))));
+        }
+        tubePath.push(new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)));
         var tube = BABYLON.MeshBuilder.CreateTube("tube", {path:tubePath, radius:radStem, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         //create male connection
@@ -190,19 +192,21 @@ const createScene = function () {
     const spacHole = 2; //spacing between holes
     const lenSlot = 6; //max length of slot hole
 
-    const angleBend = 45; //stem bend angle (in degrees)
+    const angleBend = 90; //stem bend angle (in degrees)
     const lenStem = 4; //stem length from conn. to conn.
     const radStem = radHole; //outer radius of stem tube
+    const radFill = 1; //fillet radius of stem bend
     const radConn = radStem/2; //radius of connection
     const lenConn = 0.5; //length of connection
 
     const numArcPts = 32; //# of points defining circle arc resolution
+    const numFillPts = 32; //# of points defining fillet arc resolution
 
     //create test branch
     testBranch = new Branch("testBranch", lenBranch, thickness, radBranch, radHole, spacHole, lenSlot, numArcPts);
 
     //create test stem
-    testStem = new Stem("testStem", angleBend, lenStem, radStem, radConn, lenConn, numArcPts);
+    testStem = new Stem("testStem", angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts);
 
 	return scene;
 }
