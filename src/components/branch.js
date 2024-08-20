@@ -22,10 +22,67 @@ function pillShape(rad, len, startX, startZ, numArcPts) {
     return pill;
 }
 
-//define branch class
-class Branch {
-    constructor(name, lenBody, thickness, radOut, radHole, spacHole, lenSlot, numArcPts) {
+//define component class
+class Component {
+    constructor() {
+
+        //initialize properties
+        this.x = 0; //x position (of local origin), initialize @ origin
+        this.y = 0; //y position (of local origin), initialize @ origin
+        this.z = 0; //z position (of local origin), initialize @ origin
+        this.ax = 0; //x rotation (about local origin), initialize as 0
+        this.ay = 0; //y rotation (about local origin), initialize as 0
+        this.az = 0; //z rotation (about local origin), initialize as 0
+        this.mesh = null; //initialize null mesh
+    }
+
+    //move component (globally)
+    move(dx, dy, dz) {
         
+        //update position properties
+        this.x += dx;
+        this.y += dy;
+        this.z += dz;
+
+        //move mesh
+        this.mesh.translate(new BABYLON.Vector3(dx, dy, dz), 1, BABYLON.Space.WORLD);
+    }
+
+    //rotate component (about local origin)
+    rotate(rx, ry, rz) {
+
+        //update rotation properties
+        this.ax += rx;
+        this.ay += ry;
+        this.az += rz;
+
+        //rotate mesh
+        this.mesh.addRotation(0, 0, rz);
+        this.mesh.addRotation(0, ry, 0);
+        this.mesh.addRotation(rx, 0, 0);
+    }
+
+    //show component
+    show() {
+        this.mesh.setEnabled(true);
+    }
+
+    //hide component
+    hide() {
+        this.mesh.setEnabled(false);
+    }
+
+    //toggle component visibility
+    toggle() {
+        this.mesh.setEnabled((this.mesh.isEnabled() ? false : true));
+    }
+}
+
+//define branch class
+class Branch extends Component {
+    constructor(name, lenBody, thickness, radOut, radHole, spacHole, lenSlot, numArcPts) {
+        super();
+
         //initialize properties
         this.name = name; //mesh name
         this.lenBody = lenBody; //branch length from end hole to end hole
@@ -35,12 +92,6 @@ class Branch {
         this.spacHole = spacHole; //spacing between holes
         this.lenSlot = lenSlot; //max length of slot hole
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
-        this.x = 0; //x position (of left circle hole), initialize @ origin
-        this.y = 0; //y position (of left circle hole), initialize @ origin
-        this.z = 0; //z position (of left circle hole), initialize @ origin
-        this.ax = 0; //x rotation (about left circle hole), initialize as 0
-        this.ay = 0; //y rotation (about left circle hole), initialize as 0
-        this.az = 0; //z rotation (about left circle hole), initialize as 0
 
         //create profile shape
         const profile = pillShape(radOut, lenBody, 0, 0, numArcPts);
@@ -48,7 +99,7 @@ class Branch {
         //create hole shapes
         const holes = [];
 
-            //left circle hole
+            //left circle hole is local origin
             const leftHole = pillShape(radHole, 0, 0, 0, numArcPts);
             holes.push(leftHole);
 
@@ -72,47 +123,6 @@ class Branch {
 
         //extrude & create mesh
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon(name, {shape:profile, holes:holes, depth:thickness, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-    }
-
-    //move branch (globally)
-    move(dx, dy, dz) {
-        
-        //update position properties
-        this.x += dx;
-        this.y += dy;
-        this.z += dz;
-
-        //move mesh
-        this.mesh.translate(new BABYLON.Vector3(dx, dy, dz), 1, BABYLON.Space.WORLD);
-    }
-
-    //rotate branch (about left circle hole)
-    rotate(rx, ry, rz) {
-
-        //update rotation properties
-        this.ax += rx;
-        this.ay += ry;
-        this.az += rz;
-
-        //rotate mesh
-        this.mesh.addRotation(0, 0, rz);
-        this.mesh.addRotation(0, ry, 0);
-        this.mesh.addRotation(rx, 0, 0);
-    }
-
-    //show branch
-    show() {
-        this.mesh.setEnabled(true);
-    }
-
-    //hide branch
-    hide() {
-        this.mesh.setEnabled(false);
-    }
-
-    //toggle branch visibility
-    toggleVis() {
-        this.mesh.setEnabled((this.mesh.isEnabled() ? false : true));
     }
 }
 
