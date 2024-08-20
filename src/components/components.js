@@ -128,11 +128,12 @@ class Branch extends Component {
 
 //define stem class
 class Stem extends Component {
-    constructor(name, lenStem, radStem, radConn, lenConn, numArcPts) {
+    constructor(name, angleBend, lenStem, radStem, radConn, lenConn, numArcPts) {
         super();
 
         //initialize properties
         this.name = name; //mesh name
+        this.angleBend = angleBend; //stem bend angle (in degrees)
         this.lenStem = lenStem; //stem length from conn. to conn.
         this.radStem = radStem; //outer radius of stem tube
         this.radConn = radConn; //radius of connection
@@ -142,14 +143,15 @@ class Stem extends Component {
         //create tube
         const tubePath = [
             new BABYLON.Vector3(0, 0, 0),
-            new BABYLON.Vector3(lenStem, 0, 0)
-        ];
+            new BABYLON.Vector3(lenStem/2, 0, 0),
+            new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180))
+        ]
         var tube = BABYLON.MeshBuilder.CreateTube("tube", {path:tubePath, radius:radStem, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         //create male connection
         const maleConnPath = [
-            new BABYLON.Vector3(lenStem, 0, 0),
-            new BABYLON.Vector3(lenConn+lenStem, 0, 0)
+            new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)),
+            new BABYLON.Vector3((lenStem/2)+(lenStem/2+lenConn)*(Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180))
         ];
         var maleConn = BABYLON.MeshBuilder.CreateTube("maleConn", {path:maleConnPath, radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
@@ -188,6 +190,7 @@ const createScene = function () {
     const spacHole = 2; //spacing between holes
     const lenSlot = 6; //max length of slot hole
 
+    const angleBend = 45; //stem bend angle (in degrees)
     const lenStem = 4; //stem length from conn. to conn.
     const radStem = radHole; //outer radius of stem tube
     const radConn = radStem/2; //radius of connection
@@ -199,7 +202,7 @@ const createScene = function () {
     testBranch = new Branch("testBranch", lenBranch, thickness, radBranch, radHole, spacHole, lenSlot, numArcPts);
 
     //create test stem
-    testStem = new Stem("testStem", lenStem, radStem, radConn, lenConn, numArcPts);
+    testStem = new Stem("testStem", angleBend, lenStem, radStem, radConn, lenConn, numArcPts);
 
 	return scene;
 }
