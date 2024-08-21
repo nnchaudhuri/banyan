@@ -22,9 +22,10 @@ function pillShape(rad, len, startX, startZ, numArcPts) {
 
 //define component class
 class Component {
-    constructor() {
+    constructor(scene) {
 
         //initialize properties
+        this.scene = scene; //scene hosting component
         this.x = 0; //x position (of local origin), initialize @ origin
         this.y = 0; //y position (of local origin), initialize @ origin
         this.z = 0; //z position (of local origin), initialize @ origin
@@ -32,6 +33,7 @@ class Component {
         this.ay = 0; //y rotation (about local origin), initialize as 0
         this.az = 0; //z rotation (about local origin), initialize as 0
         this.mesh = null; //initialize null mesh
+        this.selected = false; //toggle for if component is selected
     }
 
     //move component (globally)
@@ -74,12 +76,31 @@ class Component {
     toggle() {
         this.mesh.setEnabled((this.mesh.isEnabled() ? false : true));
     }
+
+    //set up component action responses
+    setupActions() {
+        //initialize mesh material
+        var mat = new BABYLON.StandardMaterial("mat", this.scene);
+        this.mesh.material = mat;
+
+        //hover over component
+        if (this.selected == false) {
+            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this.mesh.material, "diffuseColor", this.mesh.material.diffuseColor));
+        }
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this.mesh.material, "diffuseColor", new BABYLON.Color3(1, 1, 0)));
+
+        //click component
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this, "selected", true))
+            .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this, "selected", false));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.mesh.material, "diffuseColor", new BABYLON.Color3(0, 1, 0)))
+            .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.mesh.material, "diffuseColor", new BABYLON.Color3(1, 1, 0)));
+    }
 }
 
 //define stem class
 class Stem extends Component {
-    constructor(name, angleBend, lenStem, radStem, radFill, radConn, lenConn,  numArcPts, numFillPts) {
-        super();
+    constructor(scene, name, angleBend, lenStem, radStem, radFill, radConn, lenConn,  numArcPts, numFillPts) {
+        super(scene);
 
         //initialize properties
         this.name = name; //mesh name
@@ -124,13 +145,17 @@ class Stem extends Component {
 
         //merge meshes
         this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn, femConn, cap], true, true, undefined, false, false);
+
+        //initialize action manager
+        this.mesh.actionManager = new BABYLON.ActionManager(scene);
+        this.setupActions();
     }
 }
 
 //define branch class
 class Branch extends Component {
-    constructor(name, lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts) {
-        super();
+    constructor(scene, name, lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts) {
+        super(scene);
 
         //initialize properties
         this.name = name; //mesh name
@@ -172,13 +197,17 @@ class Branch extends Component {
 
         //extrude & create mesh
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon(name, {shape:profile, holes:holes, depth:thickBranch, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+
+        //initialize action manager
+        this.mesh.actionManager = new BABYLON.ActionManager(scene);
+        this.setupActions();
     }
 }
 
 //define trunk class (tiles with ribs)
 class Trunk extends Component {
-    constructor(name, lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts) {
-        super();
+    constructor(scene, name, lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts) {
+        super(scene);
 
         //initialize properties
         this.name = name; //mesh name
@@ -252,6 +281,10 @@ class Trunk extends Component {
 
         //merge meshes
         this.mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true, undefined, false, false);
+
+        //initialize action manager
+        this.mesh.actionManager = new BABYLON.ActionManager(scene);
+        this.setupActions();
     }
 }
 
@@ -294,13 +327,13 @@ const createScene = function () {
     const numFillPts = 32; //# of points defining fillet arc resolution
 
     //create test stem
-    testStem = new Stem("testStem", angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts);
+    testStem = new Stem(scene, "testStem", angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts);
 
     //create test branch
-    testBranch = new Branch("testBranch", lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts);
+    testBranch = new Branch(scene, "testBranch", lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts);
 
     //create test trunk
-    testTrunk = new Trunk("testTrunk", lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts);
+    testTrunk = new Trunk(scene, "testTrunk", lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts);
 
 	return scene;
 }
