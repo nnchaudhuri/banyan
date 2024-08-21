@@ -316,6 +316,14 @@ const createScene = function () {
 	camera.attachControl(canvas, true);
 	const light = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 50, 0));
 
+    //gizmo
+    const utilLayer = new BABYLON.UtilityLayerRenderer(scene);
+    var gizmo = new BABYLON.GizmoManager(scene)
+    gizmo.positionGizmoEnabled = true;
+    gizmo.rotationGizmoEnabled = true;
+    gizmo.updateGizmoRotationToMatchAttachedMesh = false;
+    gizmo.updateGizmoPositionToMatchAttachedMesh = true;
+
 	//input properties
     const radHole = 0.25; //radius of holes
     const spacHole = 2; //center-to-center spacing between holes
@@ -342,7 +350,7 @@ const createScene = function () {
     const edgeRib = thickBranch; //tile side edge distance before first rib
     const overhang = 1; //tile end edge distance overhanging rib end
 
-    const numArcPts = 32; //# of points defining circle arc resolution
+    const numArcPts = 64; //# of points defining circle arc resolution
     const numFillPts = 32; //# of points defining fillet arc resolution
 
     //create test stem
