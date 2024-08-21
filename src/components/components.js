@@ -34,6 +34,21 @@ class Component {
         this.az = 0; //z rotation (about local origin), initialize as 0
         this.mesh = null; //initialize null mesh
         this.selected = false; //toggle for if component is selected
+
+        //default material
+        this.defMat = new BABYLON.StandardMaterial("defMat", scene);
+        this.defCol = new BABYLON.Color3(1, 1, 1);
+        this.defMat.diffuseColor = this.defCol;
+
+        //hover material
+        this.hovMat = new BABYLON.StandardMaterial("hovMat", scene);
+        this.hovCol = new BABYLON.Color3(1, 1, 0);
+        this.hovMat.diffuseColor = this.hovCol;
+
+        //selected material
+        this.selMat = new BABYLON.StandardMaterial("selMat", scene);
+        this.selCol = new BABYLON.Color3(0, 1, 0);
+        this.selMat.diffuseColor = this.selCol;
     }
 
     //move component (globally)
@@ -80,20 +95,21 @@ class Component {
     //set up component action responses
     setupActions() {
         //initialize mesh material
-        var mat = new BABYLON.StandardMaterial("mat", this.scene);
-        this.mesh.material = mat;
+        this.mesh.material = this.defMat;
 
         //hover over component
-        if (this.selected == false) {
-            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this.mesh.material, "diffuseColor", this.mesh.material.diffuseColor));
-        }
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this.mesh.material, "diffuseColor", new BABYLON.Color3(1, 1, 0)));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this.mesh, "material", this.defMat));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this.mesh, "material", this.hovMat));
 
         //click component
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this, "selected", true))
             .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this, "selected", false));
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.mesh.material, "diffuseColor", new BABYLON.Color3(0, 1, 0)))
-            .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.mesh.material, "diffuseColor", new BABYLON.Color3(1, 1, 0)));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.defMat, "diffuseColor", this.selCol))
+            .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.defMat, "diffuseColor", this.defCol));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.hovMat, "diffuseColor", this.selCol))
+            .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.hovMat, "diffuseColor", this.hovCol));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.mesh, "material", this.selMat))
+            .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.mesh, "material", this.hovMat));
     }
 }
 
