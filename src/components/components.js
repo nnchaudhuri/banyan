@@ -161,6 +161,7 @@ class Stem extends Component {
 
         //merge meshes
         this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn, femConn, cap], true, true, undefined, false, false);
+        this.mesh.addRotation(Math.PI/2, Math.PI/2, 0); //rotate to default orientation
 
         //initialize action manager
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
@@ -213,6 +214,7 @@ class Branch extends Component {
 
         //extrude & create mesh
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon(name, {shape:profile, holes:holes, depth:thickBranch, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
         //initialize action manager
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
@@ -297,6 +299,7 @@ class Trunk extends Component {
 
         //merge meshes
         this.mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true, undefined, false, false);
+        this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
         //initialize action manager
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
@@ -309,7 +312,7 @@ const createScene = function () {
 	
     //setup scene
     const scene = new BABYLON.Scene(engine);
-	const camera = new BABYLON.ArcRotateCamera("Camera", -Math.PI/2, 0, 50, BABYLON.Vector3.Zero());
+	const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI/2, Math.PI/2, 100, BABYLON.Vector3.Zero());
 	camera.attachControl(canvas, true);
 	const light = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 50, 0));
 
