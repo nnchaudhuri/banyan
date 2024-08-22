@@ -159,7 +159,27 @@ class Component {
     }
 }
 
-//define stem class
+//define leaf class (fabric elements)
+class Leaf extends Component {
+        constructor(scene, snapDist, snapRot, name, lenX, lenY) {
+            super(scene, snapDist, snapRot);
+
+            //initialize properties
+            this.name = name; //mesh name
+            this.lenX = lenX; //leaf length in x-dir
+            this.lenY = lenY; //leaf length in y-dir
+
+            //create mesh
+            this.mesh = BABYLON.MeshBuilder.CreatePlane(name, {height:lenY, width:lenX, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+            this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
+
+            //initialize controls
+            this.mesh.actionManager = new BABYLON.ActionManager(scene);
+            this.setupControls();
+        }
+}
+
+//define stem class (rods for connections or as frames)
 class Stem extends Component {
     constructor(scene, snapDist, snapRot, name, angleBend, lenStem, radStem, radFill, radConn, lenConn,  numArcPts, numFillPts) {
         super(scene, snapDist, snapRot);
@@ -215,7 +235,7 @@ class Stem extends Component {
     }
 }
 
-//define branch class
+//define branch class (frame members with holes & slots)
 class Branch extends Component {
     constructor(scene, snapDist, snapRot, name, lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts) {
         super(scene, snapDist, snapRot);
@@ -268,7 +288,7 @@ class Branch extends Component {
     }
 }
 
-//define trunk class (tiles with ribs)
+//define trunk class (plank tiles with holed ribs)
 class Trunk extends Component {
     constructor(scene, snapDist, snapRot, name, lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts) {
         super(scene, snapDist, snapRot);
@@ -353,6 +373,27 @@ class Trunk extends Component {
     }
 }
 
+//define tree class (group of components --> furniture)
+class Tree {
+    constructor(scene) {
+
+        //initialize properties
+        this.scene = scene; //scene hosting tree
+        this.components = []; //array of components in tree
+    }
+
+    //add component
+
+    //copy component
+    
+    //remove component
+
+    //save tree file
+
+    //load tree file
+
+}
+
 //create scene
 const createScene = function () {
 	
@@ -362,6 +403,7 @@ const createScene = function () {
     //setup camera
 	const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI/4, Math.PI/4, 100, BABYLON.Vector3.Zero());
 	camera.attachControl(canvas, true);
+    camera.inputs.attached.keyboard.angularSpeed = 0.005;
     camera.minZ = 0.01;
     camera.maxZ = 1000;
     camera.wheelDeltaPercentage = 0.01;
@@ -389,6 +431,9 @@ const createScene = function () {
 	const light = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 50, 0));
 
 	//input properties
+    const lenX = 6; //leaf length in x-dir
+    const lenY = 4; //leaf length in y-dir
+
     const radHole = 0.25; //radius of holes
     const spacHole = 2; //center-to-center spacing between holes
     
@@ -418,6 +463,9 @@ const createScene = function () {
     const snapRot = 15; //snap rotation angle (in degrees) for gizmo controls
     const numArcPts = 64; //# of points defining circle arc resolution
     const numFillPts = 32; //# of points defining fillet arc resolution
+
+    //create test leaf
+    testLeaf = new Leaf(scene, snapDist, snapRot, "testLeaf", lenX, lenY);
 
     //create test stem
     testStem = new Stem(scene, snapDist, snapRot, "testStem", angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts);
