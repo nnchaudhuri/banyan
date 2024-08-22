@@ -22,7 +22,7 @@ function pillShape(rad, len, startX, startZ, numArcPts) {
 
 //define component class
 class Component {
-    constructor(scene) {
+    constructor(scene, snapDist, snapRot) {
 
         //initialize properties
         this.scene = scene; //scene hosting component
@@ -42,6 +42,8 @@ class Component {
         this.rxGizmo = null;
         this.ryGizmo = null;
         this.rzGizmo = null;
+        this.snapDist = snapDist;
+        this.snapRot = snapRot;
 
         //set axis colors
         this.xCol = new BABYLON.Color3(1, 0, 0);
@@ -110,13 +112,21 @@ class Component {
         //initialize mesh material
         this.mesh.material = this.defMat;
 
-        //gizmos
+        //create gizmos
         this.dxGizmo = new BABYLON.AxisDragGizmo(new BABYLON.Vector3(1, 0, 0), this.xCol);
         this.dyGizmo = new BABYLON.AxisDragGizmo(new BABYLON.Vector3(0, 1, 0), this.yCol);
         this.dzGizmo = new BABYLON.AxisDragGizmo(new BABYLON.Vector3(0, 0, 1), this.zCol);
         this.rxGizmo = new BABYLON.PlaneRotationGizmo(new BABYLON.Vector3(1, 0, 0), this.xCol);
         this.ryGizmo = new BABYLON.PlaneRotationGizmo(new BABYLON.Vector3(0, 1, 0), this.yCol);
         this.rzGizmo = new BABYLON.PlaneRotationGizmo(new BABYLON.Vector3(0, 0, 1), this.zCol);
+
+        //adjust gizmo snap distance
+        this.dxGizmo.snapDistance = this.snapDist;
+        this.dyGizmo.snapDistance = this.snapDist;
+        this.dzGizmo.snapDistance = this.snapDist;
+        this.rxGizmo.snapDistance = this.snapRot*Math.PI/180;
+        this.ryGizmo.snapDistance = this.snapRot*Math.PI/180;
+        this.rzGizmo.snapDistance = this.snapRot*Math.PI/180;
 
         //hover over component
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this.mesh, "material", this.defMat));
@@ -151,8 +161,8 @@ class Component {
 
 //define stem class
 class Stem extends Component {
-    constructor(scene, name, angleBend, lenStem, radStem, radFill, radConn, lenConn,  numArcPts, numFillPts) {
-        super(scene);
+    constructor(scene, snapDist, snapRot, name, angleBend, lenStem, radStem, radFill, radConn, lenConn,  numArcPts, numFillPts) {
+        super(scene, snapDist, snapRot);
 
         //initialize properties
         this.name = name; //mesh name
@@ -207,8 +217,8 @@ class Stem extends Component {
 
 //define branch class
 class Branch extends Component {
-    constructor(scene, name, lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts) {
-        super(scene);
+    constructor(scene, snapDist, snapRot, name, lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts) {
+        super(scene, snapDist, snapRot);
 
         //initialize properties
         this.name = name; //mesh name
@@ -260,8 +270,8 @@ class Branch extends Component {
 
 //define trunk class (tiles with ribs)
 class Trunk extends Component {
-    constructor(scene, name, lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts) {
-        super(scene);
+    constructor(scene, snapDist, snapRot, name, lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts) {
+        super(scene, snapDist, snapRot);
 
         //initialize properties
         this.name = name; //mesh name
@@ -378,17 +388,19 @@ const createScene = function () {
     const edgeRib = thickBranch; //tile side edge distance before first rib
     const overhang = 1; //tile end edge distance overhanging rib end
 
+    const snapDist = 1; //snap distance for gizmo controls
+    const snapRot = 15; //snap rotation angle (in degrees) for gizmo controls
     const numArcPts = 64; //# of points defining circle arc resolution
     const numFillPts = 32; //# of points defining fillet arc resolution
 
     //create test stem
-    testStem = new Stem(scene, "testStem", angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts);
+    testStem = new Stem(scene, snapDist, snapRot, "testStem", angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts);
 
     //create test branch
-    testBranch = new Branch(scene, "testBranch", lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts);
+    testBranch = new Branch(scene, snapDist, snapRot, "testBranch", lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts);
 
     //create test trunk
-    testTrunk = new Trunk(scene, "testTrunk", lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts);
+    testTrunk = new Trunk(scene, snapDist, snapRot, "testTrunk", lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts);
 
 	return scene;
 }
