@@ -35,6 +35,19 @@ class Component {
         this.mesh = null; //initialize null mesh
         this.selected = false; //toggle for if component is selected
 
+        //initialize gizmos
+        this.dxGizmo = null;
+        this.dyGizmo = null;
+        this.dzGizmo = null;
+        this.rxGizmo = null;
+        this.ryGizmo = null;
+        this.rzGizmo = null;
+
+        //set axis colors
+        this.xCol = new BABYLON.Color3(1, 0, 0);
+        this.yCol = new BABYLON.Color3(0, 1, 0);
+        this.zCol = new BABYLON.Color3(0, 0, 1);
+
         //default material
         this.defMat = new BABYLON.StandardMaterial("defMat", scene);
         this.defCol = new BABYLON.Color3(1, 1, 1);
@@ -48,7 +61,7 @@ class Component {
         //selected material
         this.selMat = new BABYLON.StandardMaterial("selMat", scene);
         this.selCol = new BABYLON.Color3(0, 1, 0);
-        this.selMat.diffuseColor = this.selCol;
+        this.selMat.diffuseColor = this.selCol; 
     }
 
     //move component (globally)
@@ -92,24 +105,47 @@ class Component {
         this.mesh.setEnabled((this.mesh.isEnabled() ? false : true));
     }
 
-    //set up component action responses
-    setupActions() {
+    //set up component controls & responses
+    setupControls() {
         //initialize mesh material
         this.mesh.material = this.defMat;
+
+        //gizmos
+        this.dxGizmo = new BABYLON.AxisDragGizmo(new BABYLON.Vector3(1, 0, 0), this.xCol);
+        this.dyGizmo = new BABYLON.AxisDragGizmo(new BABYLON.Vector3(0, 1, 0), this.yCol);
+        this.dzGizmo = new BABYLON.AxisDragGizmo(new BABYLON.Vector3(0, 0, 1), this.zCol);
+        this.rxGizmo = new BABYLON.PlaneRotationGizmo(new BABYLON.Vector3(1, 0, 0), this.xCol);
+        this.ryGizmo = new BABYLON.PlaneRotationGizmo(new BABYLON.Vector3(0, 1, 0), this.yCol);
+        this.rzGizmo = new BABYLON.PlaneRotationGizmo(new BABYLON.Vector3(0, 0, 1), this.zCol);
 
         //hover over component
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this.mesh, "material", this.defMat));
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this.mesh, "material", this.hovMat));
 
-        //click component
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this, "selected", true))
-            .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this, "selected", false));
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.defMat, "diffuseColor", this.selCol))
-            .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.defMat, "diffuseColor", this.defCol));
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.hovMat, "diffuseColor", this.selCol))
-            .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.hovMat, "diffuseColor", this.hovCol));
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.mesh, "material", this.selMat))
-            .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.mesh, "material", this.hovMat));
+        //click (select) component
+            //selection coloring
+            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this, "selected", true))
+                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this, "selected", false));
+            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.defMat, "diffuseColor", this.selCol))
+                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.defMat, "diffuseColor", this.defCol));
+            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.hovMat, "diffuseColor", this.selCol))
+                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.hovMat, "diffuseColor", this.hovCol));
+            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.mesh, "material", this.selMat))
+                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.mesh, "material", this.hovMat));
+
+            //gizmo visibility
+            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.dxGizmo, "attachedMesh", this.mesh))
+                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.dxGizmo, "attachedMesh", null));
+            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.dyGizmo, "attachedMesh", this.mesh))
+                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.dyGizmo, "attachedMesh", null));
+            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.dzGizmo, "attachedMesh", this.mesh))
+                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.dzGizmo, "attachedMesh", null));
+            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.rxGizmo, "attachedMesh", this.mesh))
+                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.rxGizmo, "attachedMesh", null));
+            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.ryGizmo, "attachedMesh", this.mesh))
+                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.ryGizmo, "attachedMesh", null));
+            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.rzGizmo, "attachedMesh", this.mesh))
+                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.rzGizmo, "attachedMesh", null));
     }
 }
 
@@ -161,11 +197,11 @@ class Stem extends Component {
 
         //merge meshes
         this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn, femConn, cap], true, true, undefined, false, false);
-        this.mesh.addRotation(Math.PI/2, Math.PI/2, 0); //rotate to default orientation
+        this.mesh.addRotation(-Math.PI/2, Math.PI/2, 0); //rotate to default orientation
 
-        //initialize action manager
+        //initialize controls
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
-        this.setupActions();
+        this.setupControls();
     }
 }
 
@@ -216,9 +252,9 @@ class Branch extends Component {
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon(name, {shape:profile, holes:holes, depth:thickBranch, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
-        //initialize action manager
+        //initialize controls
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
-        this.setupActions();
+        this.setupControls();
     }
 }
 
@@ -301,9 +337,9 @@ class Trunk extends Component {
         this.mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true, undefined, false, false);
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
-        //initialize action manager
+        //initialize controls
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
-        this.setupActions();
+        this.setupControls();
     }
 }
 
@@ -315,14 +351,6 @@ const createScene = function () {
 	const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI/2, Math.PI/2, 100, BABYLON.Vector3.Zero());
 	camera.attachControl(canvas, true);
 	const light = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 50, 0));
-
-    //gizmo
-    const utilLayer = new BABYLON.UtilityLayerRenderer(scene);
-    var gizmo = new BABYLON.GizmoManager(scene)
-    gizmo.positionGizmoEnabled = true;
-    gizmo.rotationGizmoEnabled = true;
-    gizmo.updateGizmoRotationToMatchAttachedMesh = false;
-    gizmo.updateGizmoPositionToMatchAttachedMesh = true;
 
 	//input properties
     const radHole = 0.25; //radius of holes
