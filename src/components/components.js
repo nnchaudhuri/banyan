@@ -451,8 +451,13 @@ class Tree {
     }
 
     //load tree file
-    load(file) {
-
+    load() {
+        let input = document.createElement('input');
+        input.type = 'file';
+        input.onchange = _ => {
+            let files = Array.from(input.files);
+        };
+        input.click();
     }
 }
 
