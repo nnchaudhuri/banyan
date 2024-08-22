@@ -22,16 +22,18 @@ function pillShape(rad, len, startX, startZ, numArcPts) {
 
 //define component class
 class Component {
-    constructor(scene, snapDist, snapRot) {
+    constructor(scene, snapDist, snapRot, [x, y, z, ax, ay, az]) {
 
         //initialize properties
         this.scene = scene; //scene hosting component
-        this.x = 0; //x position (of local origin), initialize @ origin
-        this.y = 0; //y position (of local origin), initialize @ origin
-        this.z = 0; //z position (of local origin), initialize @ origin
-        this.ax = 0; //x rotation (about local origin), initialize as 0
-        this.ay = 0; //y rotation (about local origin), initialize as 0
-        this.az = 0; //z rotation (about local origin), initialize as 0
+        this.ID = null; //initialize null component ID
+        this.x = 0; //x position (of local origin), initialize to 0 as specific components set starting position & rotation
+        this.y = 0; //y position (of local origin), initialize to 0 as specific components set starting position & rotation
+        this.z = 0; //z position (of local origin), initialize to 0 as specific components set starting position & rotation
+        this.ax = 0; //x rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
+        this.ay = 0; //y rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
+        this.az = 0; //z rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
+        this.type = null; //initialize null component type
         this.mesh = null; //initialize null mesh
         this.selected = false; //toggle for if component is selected
 
@@ -63,7 +65,7 @@ class Component {
         //selected material
         this.selMat = new BABYLON.StandardMaterial("selMat", scene);
         this.selCol = new BABYLON.Color3(0, 1, 0);
-        this.selMat.diffuseColor = this.selCol; 
+        this.selMat.diffuseColor = this.selCol;
     }
 
     //move component (globally)
@@ -78,7 +80,7 @@ class Component {
         this.mesh.translate(new BABYLON.Vector3(dx, dy, dz), 1, BABYLON.Space.WORLD);
     }
 
-    //rotate component (about local origin)
+    //rotate component (in degrees, about local origin)
     rotate(rx, ry, rz) {
 
         //update rotation properties
@@ -87,9 +89,9 @@ class Component {
         this.az += rz;
 
         //rotate mesh
-        this.mesh.addRotation(0, 0, rz);
-        this.mesh.addRotation(0, ry, 0);
-        this.mesh.addRotation(rx, 0, 0);
+        this.mesh.addRotation(0, 0, rz*Math.PI/180);
+        this.mesh.addRotation(0, ry*Math.PI/180, 0);
+        this.mesh.addRotation(rx*Math.PI/180, 0, 0);
     }
 
     //show component
@@ -105,6 +107,11 @@ class Component {
     //toggle component visibility
     toggle() {
         this.mesh.setEnabled((this.mesh.isEnabled() ? false : true));
+    }
+
+    //delete component
+    delete() {
+        this.mesh.dispose();
     }
 
     //set up component controls & responses
@@ -161,31 +168,35 @@ class Component {
 
 //define leaf class (fabric elements)
 class Leaf extends Component {
-        constructor(scene, snapDist, snapRot, name, lenX, lenY) {
-            super(scene, snapDist, snapRot);
+    constructor(scene, snapDist, snapRot, [x, y, z, ax, ay, az], lenX, lenY) {
+        super(scene, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
-            //initialize properties
-            this.name = name; //mesh name
-            this.lenX = lenX; //leaf length in x-dir
-            this.lenY = lenY; //leaf length in y-dir
+        //initialize properties
+        this.type = "leaf"; //component type
+        this.lenX = lenX; //leaf length in x-dir
+        this.lenY = lenY; //leaf length in y-dir
 
-            //create mesh
-            this.mesh = BABYLON.MeshBuilder.CreatePlane(name, {height:lenY, width:lenX, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-            this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
+        //create mesh
+        this.mesh = BABYLON.MeshBuilder.CreatePlane("leaf", {height:lenY, width:lenX, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
-            //initialize controls
-            this.mesh.actionManager = new BABYLON.ActionManager(scene);
-            this.setupControls();
-        }
+        //set starting position & rotation
+        this.move(x, y, z);
+        this.rotate(ax, ay, az);
+
+        //initialize controls
+        this.mesh.actionManager = new BABYLON.ActionManager(scene);
+        this.setupControls();
+    }
 }
 
 //define stem class (rods for connections or as frames)
 class Stem extends Component {
-    constructor(scene, snapDist, snapRot, name, angleBend, lenStem, radStem, radFill, radConn, lenConn,  numArcPts, numFillPts) {
-        super(scene, snapDist, snapRot);
+    constructor(scene, snapDist, snapRot, [x, y, z, ax, ay, az], angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts) {
+        super(scene, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
-        this.name = name; //mesh name
+        this.type = "stem"; //component type
         this.angleBend = angleBend; //stem bend angle (in degrees)
         this.lenStem = lenStem; //stem length from conn. to conn.
         this.radStem = radStem; //outer radius of stem tube
@@ -229,6 +240,10 @@ class Stem extends Component {
         this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn, femConn, cap], true, true, undefined, false, false);
         this.mesh.addRotation(-Math.PI/2, Math.PI/2, 0); //rotate to default orientation
 
+        //set starting position & rotation
+        this.move(x, y, z);
+        this.rotate(ax, ay, az);
+
         //initialize controls
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
@@ -237,11 +252,11 @@ class Stem extends Component {
 
 //define branch class (frame members with holes & slots)
 class Branch extends Component {
-    constructor(scene, snapDist, snapRot, name, lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts) {
-        super(scene, snapDist, snapRot);
+    constructor(scene, snapDist, snapRot, [x, y, z, ax, ay, az], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts) {
+        super(scene, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
-        this.name = name; //mesh name
+        this.type = "branch"; //component type
         this.lenBranch = lenBranch; //branch length from end hole to end hole
         this.thickBranch = thickBranch; //branch thickness
         this.radBranch = radBranch; //outer radius of branch profile
@@ -279,8 +294,12 @@ class Branch extends Component {
             holes.push(rightHole);
 
         //extrude & create mesh
-        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon(name, {shape:profile, holes:holes, depth:thickBranch, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("branch", {shape:profile, holes:holes, depth:thickBranch, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
+
+        //set starting position & rotation
+        this.move(x, y, z);
+        this.rotate(ax, ay, az);
 
         //initialize controls
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
@@ -290,11 +309,11 @@ class Branch extends Component {
 
 //define trunk class (plank tiles with holed ribs)
 class Trunk extends Component {
-    constructor(scene, snapDist, snapRot, name, lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts) {
-        super(scene, snapDist, snapRot);
+    constructor(scene, snapDist, snapRot, [x, y, z, ax, ay, az], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts) {
+        super(scene, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
-        this.name = name; //mesh name
+        this.type = "trunk"; //component type
         this.lenTrunk = lenTrunk; //trunk length from end hole to end hole
         this.lenTile = lenTrunk+2*(2*radRib+overhang); //tile length
         this.widthTile = widthTile; //tile width
@@ -367,6 +386,10 @@ class Trunk extends Component {
         this.mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true, undefined, false, false);
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
+        //set starting position & rotation
+        this.move(x, y, z);
+        this.rotate(ax, ay, az);
+
         //initialize controls
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
@@ -375,23 +398,62 @@ class Trunk extends Component {
 
 //define tree class (group of components --> furniture)
 class Tree {
-    constructor(scene) {
+    constructor(scene, snapDist, snapRot, numArcPts, numFillPts) {
 
         //initialize properties
         this.scene = scene; //scene hosting tree
         this.components = []; //array of components in tree
+        this.componentIDs = []; //array of component IDs in tree
+        this.nextID = 1; //initialize next component ID val
+        this.snapDist = snapDist; //snap distance for gizmo controls
+        this.snapRot = snapRot; //snap rotation angle (in degrees) for gizmo controls
+        this.numArcPts = numArcPts; //# of points defining circle arc resolution
+        this.numFillPts = numFillPts; //# of points defining fillet arc resolution
     }
 
     //add component
+    add(component) {
+        this.components.push(component);
+        component.ID = this.nextID;
+        this.componentIDs.push(this.nextID);
+        this.nextID++;
+    }
 
     //copy component
     
     //remove component
+    remove(component) {
+        const index = this.componentIDs.indexOf(component.ID);
+        if (index > -1) {
+            this.componentIDs.splice(index, 1);
+            this.components.splice(index, 1);
+            component.delete();
+        }
+    }
 
     //save tree file
+    save() {
+        const contents = [];
+        for (let i = 0; i < this.components.length; i++) {
+            const c = this.components[i];
+            if (c.type == "leaf") {
+                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenX, c.lenY, '\n']);
+            } else if (c.type == "stem") {
+                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.angleBend, c.lenStem, c.radStem, c.radFill, c.radConn, c.lenConn, '\n']);
+            } else if (c.type == "branch") {
+                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenBranch, c.thickBranch, c.radBranch, c.radHole, c.spacHole, c.lenSlot, '\n']);
+            } else if (c.type == "trunk") {
+                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenTrunk, c.widthTile, c.thickTile, c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, '\n']);
+            }
+        }
+        const file = new Blob(contents, {type: "text/plain;charset=utf-8",});
+        saveAs(file, "myTree.txt");
+    }
 
     //load tree file
+    load(file) {
 
+    }
 }
 
 //create scene
@@ -464,17 +526,12 @@ const createScene = function () {
     const numArcPts = 64; //# of points defining circle arc resolution
     const numFillPts = 32; //# of points defining fillet arc resolution
 
-    //create test leaf
-    testLeaf = new Leaf(scene, snapDist, snapRot, "testLeaf", lenX, lenY);
-
-    //create test stem
-    testStem = new Stem(scene, snapDist, snapRot, "testStem", angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts);
-
-    //create test branch
-    testBranch = new Branch(scene, snapDist, snapRot, "testBranch", lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts);
-
-    //create test trunk
-    testTrunk = new Trunk(scene, snapDist, snapRot, "testTrunk", lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts);
+    //create test tree
+    testTree = new Tree(scene, snapDist, snapRot, numArcPts, numFillPts);
+    testTree.add(new Leaf(scene, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenX, lenY));
+    testTree.add(new Stem(scene, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts));
+    testTree.add(new Branch(scene, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts));
+    testTree.add(new Trunk(scene, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts));
 
 	return scene;
 }
