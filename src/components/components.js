@@ -358,8 +358,34 @@ const createScene = function () {
 	
     //setup scene
     const scene = new BABYLON.Scene(engine);
-	const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI/2, Math.PI/2, 100, BABYLON.Vector3.Zero());
+
+    //setup camera
+	const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI/4, Math.PI/4, 100, BABYLON.Vector3.Zero());
 	camera.attachControl(canvas, true);
+    camera.minZ = 0.01;
+    camera.maxZ = 1000;
+    camera.wheelDeltaPercentage = 0.01;
+    camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+    camera.orthoLeft = -36;
+    camera.orthoRight = 36;
+    const ratio = canvas.height/canvas.width;
+    const setOrthoCameraTopBottom = (camera, ratio) => {
+        camera.orthoTop = camera.orthoRight*ratio;
+        camera.orthoBottom = camera.orthoLeft*ratio;
+    }
+    setOrthoCameraTopBottom(camera, ratio);
+    let oldRadius = camera.radius;
+    scene.onBeforeRenderObservable.add(() => {
+        if (oldRadius !== camera.radius) {
+            const radiusChangeRatio = camera.radius/oldRadius;
+            camera.orthoLeft *= radiusChangeRatio;
+            camera.orthoRight *= radiusChangeRatio;
+            oldRadius = camera.radius;
+            setOrthoCameraTopBottom(camera, ratio);
+        }
+    })
+
+    //setup light
 	const light = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 50, 0));
 
 	//input properties
