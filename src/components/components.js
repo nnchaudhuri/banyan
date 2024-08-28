@@ -452,12 +452,42 @@ class Tree {
 
     //load tree file
     load() {
-        let input = document.createElement('input');
+
+        //process file from local browser
+        const input = document.createElement('input');
         input.type = 'file';
         input.onchange = _ => {
-            let files = Array.from(input.files);
+            const files = Array.from(input.files);
+            const file = document.getElementById("fileForUpload").files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.readAsText(file, "UTF-8");
+                reader.onload = function (evt) {
+                    //document.getElementById("fileContents").innerHTML = evt.target.result;
+                    const contents = evt.target.result;
+                    var lines = contents.split('\n');
+                }
+                reader.onerror = function (evt) {
+                    document.getElementById("fileContents").innerHTML = "error reading file";
+                }
+            }
         };
         input.click();
+
+        //create components per file lines
+        for (let i = 0; i < lines.length; i++) {
+            line = lines[i];
+            data = lines.split(',');
+            if (data[0] == "leaf") {
+                this.add(new Leaf(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8]));
+            } else if (data[0] == "stem") {
+                this.add(new Stem(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], this.numArcPts, this.numFillPts));
+            } else if (data[0] == "branch") {
+                this.add(new Branch(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], this.numArcPts));
+            } else if (data[0] == "trunk") {
+                this.add(new Trunk(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], this.numArcPts));
+            }
+        }
     }
 }
 
