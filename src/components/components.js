@@ -431,6 +431,13 @@ class Tree {
         }
     }
 
+    //clear all components
+    clear() {
+        for (let i = 0; i < this.components.length; i++) {
+            this.remove(this.components[i]);
+        }
+    }
+
     //save tree file
     save() {
         const contents = [];
@@ -456,46 +463,60 @@ class Tree {
         //process file from local browser
         const input = document.createElement('input');
         input.type = 'file';
-        input.onchange = _ => {
-            const files = Array.from(input.files);
-            const file = document.getElementById("fileForUpload").files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.readAsText(file, "UTF-8");
-                reader.onload = function (evt) {
-                    //document.getElementById("fileContents").innerHTML = evt.target.result;
-                    const contents = evt.target.result;
-                    var lines = contents.split('\n');
-                }
-                reader.onerror = function (evt) {
-                    document.getElementById("fileContents").innerHTML = "error reading file";
-                }
-            }
-        };
         input.click();
+        input.onchange = _ => {
+            const files = input.files;
+            if (files.length > 0) {
+                const reader = new FileReader();
+                reader.readAsText(files[0], "utf-8");
+                reader.onload = _ => {
+                    const lines = reader.result.split('\n');
 
-        //create components per file lines
-        for (let i = 0; i < lines.length; i++) {
-            line = lines[i];
-            data = lines.split(',');
-            if (data[0] == "leaf") {
-                this.add(new Leaf(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8]));
-            } else if (data[0] == "stem") {
-                this.add(new Stem(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], this.numArcPts, this.numFillPts));
-            } else if (data[0] == "branch") {
-                this.add(new Branch(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], this.numArcPts));
-            } else if (data[0] == "trunk") {
-                this.add(new Trunk(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], this.numArcPts));
+                    //create components per file lines
+                    for (let j = 0; j < lines.length; j++) {
+                        const line = lines[j];
+                        const dataString = line.split(',');
+                        const data = [dataString[0]];
+                        for (let i = 1; i < dataString.length; i++) {
+                            data.push(parseFloat(dataString[i]));
+                        }
+                        if (data[0] == "leaf") {
+                            this.add(new Leaf(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8]));
+                        } else if (data[0] == "stem") {
+                            this.add(new Stem(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], this.numArcPts, this.numFillPts));
+                        } else if (data[0] == "branch") {
+                            this.add(new Branch(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], this.numArcPts));
+                        } else if (data[0] == "trunk") {
+                            this.add(new Trunk(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], this.numArcPts));
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 //create scene
-const createScene = function () {
+const createScene = async function () { //for debugging
+//const createScene = function () {
 	
+    ///*console for debugging
+    await new Promise(r => {
+        var s = document.createElement("script");
+        s.src = "https://console3.babylonjs.xyz/console3-playground.js";
+        document.head.appendChild(s);
+        s.onload = r();
+    })
+    //*/
+
     //setup scene
-    const scene = new BABYLON.Scene(engine);
+    var scene = new BABYLON.Scene(engine);
+
+    ///*console for debugging
+    var c3 = window.console3;
+    c3.create(engine, scene);
+    c3.log("scene created");
+    //*/
 
     //setup camera
 	const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI/4, Math.PI/4, 100, BABYLON.Vector3.Zero());
@@ -563,10 +584,13 @@ const createScene = function () {
 
     //create test tree
     testTree = new Tree(scene, snapDist, snapRot, numArcPts, numFillPts);
+    /*
     testTree.add(new Leaf(scene, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenX, lenY));
     testTree.add(new Stem(scene, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts));
     testTree.add(new Branch(scene, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts));
     testTree.add(new Trunk(scene, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts));
+    */
+    testTree.load();
 
 	return scene;
 }
