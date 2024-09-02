@@ -566,6 +566,9 @@ const createScene = async function () { //for debugging
 
     //setup light
 	const light = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 50, 0));
+    scene.registerBeforeRender(function () {
+        light.direction = camera.position;
+    })
 
 	//input properties
     const lenX = 6; //leaf length in x-dir
