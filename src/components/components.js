@@ -114,6 +114,42 @@ class Component {
         this.mesh.dispose();
     }
 
+    //select component
+    select() {
+        this.selected = true;
+
+        //selection coloring
+        this.defMat.diffuseColor = this.selCol;
+        this.hovMat.diffuseColor = this.selCol;
+        this.mesh.material = this.selMat;
+
+        //turn on gizmos
+        this.dxGizmo.attachedMesh = this.mesh;
+        this.dyGizmo.attachedMesh = this.mesh;
+        this.dzGizmo.attachedMesh = this.mesh;
+        this.rxGizmo.attachedMesh = this.mesh;
+        this.ryGizmo.attachedMesh = this.mesh;
+        this.rzGizmo.attachedMesh = this.mesh;
+    }
+
+    //deselect component
+    deselect() {
+        this.selected = false;
+
+        //default coloring
+        this.defMat.diffuseColor = this.defCol;
+        this.hovMat.diffuseColor = this.hovCol;
+        this.mesh.material = this.defMat;
+
+        //turn off gizmos
+        this.dxGizmo.attachedMesh = null;
+        this.dyGizmo.attachedMesh = null;
+        this.dzGizmo.attachedMesh = null;
+        this.rxGizmo.attachedMesh = null;
+        this.ryGizmo.attachedMesh = null;
+        this.rzGizmo.attachedMesh = null;
+    }
+
     //set up component visuals
     setupVisuals() {
         //initialize mesh material
@@ -148,6 +184,14 @@ class Component {
         this.rxGizmo.snapDistance = this.snapRot*Math.PI/180;
         this.ryGizmo.snapDistance = this.snapRot*Math.PI/180;
         this.rzGizmo.snapDistance = this.snapRot*Math.PI/180;
+
+        //update component position & rotation properties per gizmo events
+        this.dxGizmo.onSnapObservable.add(event => {this.x += event.snapDistance});
+        this.dyGizmo.onSnapObservable.add(event => {this.y += event.snapDistance});
+        this.dzGizmo.onSnapObservable.add(event => {this.z += event.snapDistance});
+        this.rxGizmo.onSnapObservable.add(event => {this.ax += Math.round(event.snapDistance*180/Math.PI)});
+        this.ryGizmo.onSnapObservable.add(event => {this.ay += Math.round(event.snapDistance*180/Math.PI)});
+        this.rzGizmo.onSnapObservable.add(event => {this.az += Math.round(event.snapDistance*180/Math.PI)});
 
         //hover over component
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this.mesh, "material", this.defMat));
@@ -427,6 +471,9 @@ class Tree {
         this.snapRot = snapRot; //snap rotation angle (in degrees) for gizmo controls
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
         this.numFillPts = numFillPts; //# of points defining fillet arc resolution
+
+        //set up controls
+        this.setupControls();
     }
 
     //add component
@@ -454,6 +501,42 @@ class Tree {
         for (let i = 0; i < this.components.length; i++) {
             this.remove(this.components[i]);
         }
+    }
+
+    //select all components
+    selectAll() {
+        for (let i = 0; i < this.components.length; i++) {
+            this.components[i].select();
+        }
+    }
+
+    //deselect all components
+    deselectAll() {
+        for (let i = 0; i < this.components.length; i++) {
+            this.components[i].deselect();
+        }
+    }
+
+    //set up tree controls & responses
+    setupControls() {
+
+        //keyboard controls
+        this.scene.onKeyboardObservable.add((kbInfo) => {
+            switch (kbInfo.type) {
+                case BABYLON.KeyboardEventTypes.KEYDOWN:
+                    switch (kbInfo.event.key) {
+                        //escape key deselects components
+                        case "Escape":
+                            this.deselectAll();
+                        break
+                        case "a":
+                        case "A":
+                            this.selectAll();
+                        break
+                    }
+                break;
+            }
+        })
     }
 
     //save tree file
@@ -529,7 +612,7 @@ const createScene = async function () { //for debugging
 
     //setup scene
     var scene = new BABYLON.Scene(engine);
-    scene.clearColor = new BABYLON.Color4(0.95, 0.95, 0.95, 1);
+    scene.clearColor = new BABYLON.Color4(1, 1, 1, 1);
 
     ///*console for debugging
     var c3 = window.console3;
