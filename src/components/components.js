@@ -22,10 +22,11 @@ function pillShape(rad, len, startX, startZ, numArcPts) {
 
 //define component class
 class Component {
-    constructor(scene, snapDist, snapRot, [x, y, z, ax, ay, az]) {
+    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]) {
 
         //initialize properties
         this.scene = scene; //scene hosting component
+        this.tree = tree; //tree the component is a part of
         this.ID = null; //initialize null component ID
         this.x = 0; //x position (of local origin), initialize to 0 as specific components set starting position & rotation
         this.y = 0; //y position (of local origin), initialize to 0 as specific components set starting position & rotation
@@ -116,7 +117,13 @@ class Component {
 
     //select component
     select() {
+        //update properties
         this.selected = true;
+        const index = this.tree.selComponentIDs.indexOf(this.ID);
+        if (index < 0) {
+            this.tree.selComponents.push(this);
+            this.tree.selComponentIDs.push(this.ID);
+        }
 
         //selection coloring
         this.defMat.diffuseColor = this.selCol;
@@ -134,7 +141,13 @@ class Component {
 
     //deselect component
     deselect() {
+        //update properties
         this.selected = false;
+        const index = this.tree.selComponentIDs.indexOf(this.ID);
+        if (index > -1) {
+            this.tree.selComponentIDs.splice(index, 1);
+            this.tree.selComponents.splice(index, 1);
+        }
 
         //default coloring
         this.defMat.diffuseColor = this.defCol;
@@ -226,8 +239,8 @@ class Component {
 
 //define leaf class (fabric elements)
 class Leaf extends Component {
-    constructor(scene, snapDist, snapRot, [x, y, z, ax, ay, az], lenX, lenY) {
-        super(scene, snapDist, snapRot, [x, y, z, ax, ay, az]);
+    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], lenX, lenY) {
+        super(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
         this.type = "leaf"; //component type
@@ -251,8 +264,8 @@ class Leaf extends Component {
 
 //define stem class (rods for connections or as frames)
 class Stem extends Component {
-    constructor(scene, snapDist, snapRot, [x, y, z, ax, ay, az], angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts) {
-        super(scene, snapDist, snapRot, [x, y, z, ax, ay, az]);
+    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts) {
+        super(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
         this.type = "stem"; //component type
@@ -312,8 +325,8 @@ class Stem extends Component {
 
 //define branch class (frame members with holes & slots)
 class Branch extends Component {
-    constructor(scene, snapDist, snapRot, [x, y, z, ax, ay, az], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts) {
-        super(scene, snapDist, snapRot, [x, y, z, ax, ay, az]);
+    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts) {
+        super(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
         this.type = "branch"; //component type
@@ -370,8 +383,8 @@ class Branch extends Component {
 
 //define trunk class (plank tiles with holed ribs)
 class Trunk extends Component {
-    constructor(scene, snapDist, snapRot, [x, y, z, ax, ay, az], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts) {
-        super(scene, snapDist, snapRot, [x, y, z, ax, ay, az]);
+    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts) {
+        super(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
         this.type = "trunk"; //component type
@@ -467,6 +480,8 @@ class Tree {
         this.components = []; //array of components in tree
         this.componentIDs = []; //array of component IDs in tree
         this.nextID = 1; //initialize next component ID val
+        this.selComponents = []; //array of selected components in tree
+        this.selComponentIDs = []; //array of selected component IDs in tree
         this.snapDist = snapDist; //snap distance for gizmo controls
         this.snapRot = snapRot; //snap rotation angle (in degrees) for gizmo controls
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
@@ -484,22 +499,33 @@ class Tree {
         this.nextID++;
     }
 
-    //copy component
-    
-    //remove component
-    remove(component) {
-        const index = this.componentIDs.indexOf(component.ID);
-        if (index > -1) {
-            this.componentIDs.splice(index, 1);
-            this.components.splice(index, 1);
-            component.delete();
+    //copy specified components
+    copy(components) {
+        for (let i = 0; i < components.length; i++) {
+            const c = components[i];
+            if (c.type == "leaf") {
+                this.add(new Leaf(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenX, c.lenY));
+            } else if (c.type == "stem") {
+                this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, c.radFill, c.radConn, c.lenConn, this.numArcPts, this.numFillPts));
+            } else if (c.type == "branch") {
+                this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, c.radBranch, c.radHole, c.spacHole, c.lenSlot, this.numArcPts));
+            } else if (c.type == "trunk") {
+                this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, this.numArcPts));
+            }
         }
     }
-
-    //clear all components
-    clear() {
-        for (let i = 0; i < this.components.length; i++) {
-            this.remove(this.components[i]);
+    
+    //delete specified components
+    delete(components) {
+        for (let i = 0; i < components.length; i++) {
+            const c = components[i];
+            const index = this.componentIDs.indexOf(c.ID);
+            if (index > -1) {
+                this.componentIDs.splice(index, 1);
+                this.components.splice(index, 1);
+                c.deselect();
+                c.delete();
+            }
         }
     }
 
@@ -532,6 +558,13 @@ class Tree {
                         case "a":
                         case "A":
                             this.selectAll();
+                        break
+                        case "c":
+                        case "C":
+                            this.copy(this.selComponents);
+                        break
+                        case "Delete":
+                            this.delete(this.selComponents);
                         break
                     }
                 break;
@@ -582,13 +615,13 @@ class Tree {
                             data.push(parseFloat(dataString[i]));
                         }
                         if (data[0] == "leaf") {
-                            this.add(new Leaf(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8]));
+                            this.add(new Leaf(this.scene, this, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8]));
                         } else if (data[0] == "stem") {
-                            this.add(new Stem(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], this.numArcPts, this.numFillPts));
+                            this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], this.numArcPts, this.numFillPts));
                         } else if (data[0] == "branch") {
-                            this.add(new Branch(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], this.numArcPts));
+                            this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], this.numArcPts));
                         } else if (data[0] == "trunk") {
-                            this.add(new Trunk(this.scene, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], this.numArcPts));
+                            this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], this.numArcPts));
                         }
                     }
                 }
@@ -690,10 +723,10 @@ const createScene = async function () { //for debugging
     //create test tree
     testTree = new Tree(scene, snapDist, snapRot, numArcPts, numFillPts);
     /*
-    testTree.add(new Leaf(scene, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenX, lenY));
-    testTree.add(new Stem(scene, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts));
-    testTree.add(new Branch(scene, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts));
-    testTree.add(new Trunk(scene, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts));
+    testTree.add(new Leaf(scene, testTree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenX, lenY));
+    testTree.add(new Stem(scene, testTree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts));
+    testTree.add(new Branch(scene, testTree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts));
+    testTree.add(new Trunk(scene, testTree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts));
     */
     testTree.load();
 
