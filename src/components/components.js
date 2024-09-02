@@ -114,10 +114,24 @@ class Component {
         this.mesh.dispose();
     }
 
-    //set up component controls & responses
-    setupControls() {
+    //set up component visuals
+    setupVisuals() {
         //initialize mesh material
         this.mesh.material = this.defMat;
+        
+        //create edges
+        this.mesh.enableEdgesRendering();
+        this.mesh.edgesWidth = 2.0;
+        this.mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);
+        
+        //create outline
+        this.mesh.renderOutline = true;
+        this.mesh.outlineColor = new BABYLON.Color3(0, 0, 0);
+        this.mesh.outlineWidth = 0.08;
+    }
+
+    //set up component controls & responses
+    setupControls() {
 
         //create gizmos
         this.dxGizmo = new BABYLON.AxisDragGizmo(new BABYLON.Vector3(1, 0, 0), this.xCol);
@@ -177,38 +191,15 @@ class Leaf extends Component {
         this.lenY = lenY; //leaf length in y-dir
 
         //create mesh
-        const plane = BABYLON.MeshBuilder.CreatePlane("leaf", {height:lenY, width:lenX, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-        const planeMat = new BABYLON.StandardMaterial("planeMat", scene);
-        planeMat.diffuseColor = new BABYLON.Color3(1, 1, 1);
-        plane.material = planeMat;
-        
-        //create outline
-        /*
-        this.mesh.enableEdgesRendering();
-        this.mesh.edgesWidth = 5.0;
-        this.mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);
-        */
-        const path = [
-            new BABYLON.Vector3(-lenX/2, -lenY/2, 0),
-            new BABYLON.Vector3(lenX/2, -lenY/2, 0),
-            new BABYLON.Vector3(lenX/2, lenY/2, 0),
-            new BABYLON.Vector3(-lenX/2, lenY/2, 0),
-        ];
-        path.push(path[0]);
-        const outline = BABYLON.MeshBuilder.CreateTube("outline", {path:path, radius:0.01, tessellation:16});
-        const outlineMat = new BABYLON.StandardMaterial("outlineMat", scene);
-        outlineMat.diffuseColor = new BABYLON.Color3(0, 0, 0);
-        outline.material = outlineMat;
-
-        //merge meshes
-        this.mesh = BABYLON.Mesh.MergeMeshes([plane, outline], true, true, undefined, false, true);
+        this.mesh = BABYLON.MeshBuilder.CreatePlane("leaf", {height:lenY, width:lenX, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
         //set starting position & rotation
         this.move(x, y, z);
         this.rotate(ax, ay, az);
 
-        //initialize controls
+        //set up visuals & controls
+        this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
     }
@@ -268,7 +259,8 @@ class Stem extends Component {
         this.move(x, y, z);
         this.rotate(ax, ay, az);
 
-        //initialize controls
+        //set up visuals & controls
+        this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
     }
@@ -325,7 +317,8 @@ class Branch extends Component {
         this.move(x, y, z);
         this.rotate(ax, ay, az);
 
-        //initialize controls
+        //set up visuals & controls
+        this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
     }
@@ -414,7 +407,8 @@ class Trunk extends Component {
         this.move(x, y, z);
         this.rotate(ax, ay, az);
 
-        //initialize controls
+        //set up visuals & controls
+        this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
     }
@@ -535,7 +529,7 @@ const createScene = async function () { //for debugging
 
     //setup scene
     var scene = new BABYLON.Scene(engine);
-    scene.clearColor = new BABYLON.Color4(1, 1, 1, 1);
+    scene.clearColor = new BABYLON.Color4(0.95, 0.95, 0.95, 1);
 
     ///*console for debugging
     var c3 = window.console3;
