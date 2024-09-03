@@ -517,8 +517,12 @@ class Tree {
     
     //delete specified components
     delete(components) {
+        const temp = [];
         for (let i = 0; i < components.length; i++) {
-            const c = components[i];
+            temp.push(components[i]);
+        }
+        for (let i = 0; i < temp.length; i++) {
+            const c = temp[i];
             const index = this.componentIDs.indexOf(c.ID);
             if (index > -1) {
                 this.componentIDs.splice(index, 1);
@@ -527,6 +531,7 @@ class Tree {
                 c.delete();
             }
         }
+        temp = [];
     }
 
     //select all components
