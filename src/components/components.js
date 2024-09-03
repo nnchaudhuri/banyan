@@ -211,29 +211,8 @@ class Component {
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this.mesh, "material", this.hovMat));
 
         //click (select) component
-            //selection coloring
-            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this, "selected", true))
-                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this, "selected", false));
-            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.defMat, "diffuseColor", this.selCol))
-                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.defMat, "diffuseColor", this.defCol));
-            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.hovMat, "diffuseColor", this.selCol))
-                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.hovMat, "diffuseColor", this.hovCol));
-            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.mesh, "material", this.selMat))
-                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.mesh, "material", this.hovMat));
-
-            //gizmo visibility
-            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.dxGizmo, "attachedMesh", this.mesh))
-                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.dxGizmo, "attachedMesh", null));
-            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.dyGizmo, "attachedMesh", this.mesh))
-                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.dyGizmo, "attachedMesh", null));
-            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.dzGizmo, "attachedMesh", this.mesh))
-                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.dzGizmo, "attachedMesh", null));
-            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.rxGizmo, "attachedMesh", this.mesh))
-                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.rxGizmo, "attachedMesh", null));
-            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.ryGizmo, "attachedMesh", this.mesh))
-                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.ryGizmo, "attachedMesh", null));
-            this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.rzGizmo, "attachedMesh", this.mesh))
-                .then(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, this.rzGizmo, "attachedMesh", null));
+        this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.select()}))
+            .then(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.deselect()}));
     }
 }
 
