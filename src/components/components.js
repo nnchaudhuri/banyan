@@ -304,6 +304,26 @@ class Component {
         this.mesh.dispose();
     }
 
+    //show gizmos
+    showGizmos() {
+        this.dxGizmo.attachedMesh = this.mesh;
+        this.dyGizmo.attachedMesh = this.mesh;
+        this.dzGizmo.attachedMesh = this.mesh;
+        this.rxGizmo.attachedMesh = this.mesh;
+        this.ryGizmo.attachedMesh = this.mesh;
+        this.rzGizmo.attachedMesh = this.mesh;
+    }
+
+    //hide gizmos
+    hideGizmos() {
+        this.dxGizmo.attachedMesh = null;
+        this.dyGizmo.attachedMesh = null;
+        this.dzGizmo.attachedMesh = null;
+        this.rxGizmo.attachedMesh = null;
+        this.ryGizmo.attachedMesh = null;
+        this.rzGizmo.attachedMesh = null;
+    }
+
     //select component
     select() {
         //update properties
@@ -319,13 +339,10 @@ class Component {
         this.hovMat.diffuseColor = this.selCol;
         this.mesh.material = this.selMat;
 
-        //turn on gizmos
-        this.dxGizmo.attachedMesh = this.mesh;
-        this.dyGizmo.attachedMesh = this.mesh;
-        this.dzGizmo.attachedMesh = this.mesh;
-        this.rxGizmo.attachedMesh = this.mesh;
-        this.ryGizmo.attachedMesh = this.mesh;
-        this.rzGizmo.attachedMesh = this.mesh;
+        //show gizmos
+        if (this.tree.showingGizmos) {
+            this.showGizmos();
+        }
     }
 
     //deselect component
@@ -343,13 +360,8 @@ class Component {
         this.hovMat.diffuseColor = this.hovCol;
         this.mesh.material = this.defMat;
 
-        //turn off gizmos
-        this.dxGizmo.attachedMesh = null;
-        this.dyGizmo.attachedMesh = null;
-        this.dzGizmo.attachedMesh = null;
-        this.rxGizmo.attachedMesh = null;
-        this.ryGizmo.attachedMesh = null;
-        this.rzGizmo.attachedMesh = null;
+        //hide gizmos
+        this.hideGizmos();
     }
 
     //show component connections
@@ -698,6 +710,7 @@ class Tree {
         this.snapRot = snapRot; //snap rotation angle (in degrees) for gizmo controls
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
         this.numFillPts = numFillPts; //# of points defining fillet arc resolution
+        this.showingGizmos = false; //toggle for gizmo visibility
 
         //set up controls
         this.setupControls();
@@ -749,6 +762,31 @@ class Tree {
         temp = [];
     }
 
+    //show specified components gizmos
+    showGizmos(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].showGizmos();
+        }
+        this.showingGizmos = true;
+    }
+
+    //hide specified components gizmos
+    hideGizmos(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].hideGizmos();
+        }
+        this.showingGizmos = false;
+    }
+
+    //toggle specified components gizmos visibility
+    toggleGizmos(components) {
+        if (this.showingGizmos) {
+            this.hideGizmos(components);
+        } else {
+            this.showGizmos(components);
+        }
+    }
+
     //select specified components
     select(components) {
         for (let i = 0; i < components.length; i++) {
@@ -793,27 +831,47 @@ class Tree {
 
     //set up tree controls & responses
     setupControls() {
+        //default gizmo visibility
+        this.hideGizmos(this.components);
+
         //keyboard controls
         this.scene.onKeyboardObservable.add((kbInfo) => {
             switch (kbInfo.type) {
                 case BABYLON.KeyboardEventTypes.KEYDOWN:
                     switch (kbInfo.event.key) {
-                        //escape key deselects components
-                        case "Escape":
-                            this.deselect(this.components);
-                            this.deselectConnections(this.components);
-                        break
+                        //a key selects all components
                         case "a":
                         case "A":
                             this.select(this.components);
                         break
+
+                        //c key copies selected components
                         case "c":
                         case "C":
                             this.copy(this.selComponents);
                         break
+
+                        //m key toggles gizmos visibility for selected components
+                        case "m":
+                        case "M":
+                            if (this.selComponents.length > 0) {
+                                this.toggleGizmos(this.selComponents);
+                            }
+                        break
+
+                        //escape key deselects all components
+                        case "Escape":
+                            this.deselect(this.components);
+                            this.hideGizmos(this.components);
+                            this.deselectConnections(this.components);
+                        break
+                        
+                        //delete key deletes selected components
                         case "Delete":
                             this.delete(this.selComponents);
                         break
+
+                        //tab key toggles connections visibility for all components
                         case "Tab":
                             this.toggleConnections(this.components);
                             this.deselectConnections(this.components);
