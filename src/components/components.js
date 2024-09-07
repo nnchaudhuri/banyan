@@ -37,21 +37,25 @@ class Connection {
         this.mesh = null; //initialize null mesh
         this.selected = false; //toggle for if connection is selected
         this.used = false; //toggle for if connection is in use
+        const alpha = 0.5; //transparency value
 
         //default material
         this.defMat = new BABYLON.StandardMaterial("defMat", scene);
         this.defCol = new BABYLON.Color3(0, 1, 1);
         this.defMat.diffuseColor = this.defCol;
+        this.defMat.alpha = alpha;
 
         //hover material
         this.hovMat = new BABYLON.StandardMaterial("hovMat", scene);
         this.hovCol = new BABYLON.Color3(1, 1, 0);
         this.hovMat.diffuseColor = this.hovCol;
+        this.hovMat.alpha = alpha;
 
         //selected material
         this.selMat = new BABYLON.StandardMaterial("selMat", scene);
         this.selCol = new BABYLON.Color3(0, 1, 0);
         this.selMat.diffuseColor = this.selCol;
+        this.selMat.alpha = alpha;
     }
 
     //move connection (globally)
@@ -140,7 +144,7 @@ class Connection {
         this.hide();
         
         //initialize mesh material
-        this.mesh.material = this.defMat
+        this.mesh.material = this.defMat;
     }
 
     //set up connection controls & responses
@@ -164,12 +168,37 @@ class Edge extends Connection {
         super(scene, component, ID, [x, y, z, ax, ay, az]);
 
         //initialize properties
-        this.type = "edge"; //component type
-        this.len = len; //edge length
-        this.thick = 0.25; //edge line thickness
+        this.type = "edge"; //connection type
 
         //create mesh
-        this.mesh = BABYLON.MeshBuilder.CreatePlane("edge", {height:len, width:this.thick, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        this.mesh = BABYLON.MeshBuilder.CreatePlane("edge", {height:len, width:0.25, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+
+        //set starting position & rotation
+        this.move(x, y, z);
+        this.rotate(ax, ay, az);
+
+        //set up visuals & controls
+        this.setupVisuals();
+        this.mesh.actionManager = new BABYLON.ActionManager(scene);
+        this.setupControls();
+    }
+}
+
+//define joint class (end connection of stem component)
+class Joint extends Connection {
+    constructor(scene, component, ID, [x, y, z, ax, ay, az], rad, numArcPts, len) {
+        super(scene, component, ID, [x, y, z, ax, ay, az]);
+
+        //initialize properties
+        this.type = "joint"; //connection type
+
+        //create mesh
+        const path = [
+            new BABYLON.Vector3(0, 0, 0),
+            new BABYLON.Vector3(0, len, 0)
+        ];
+        this.mesh = BABYLON.MeshBuilder.CreateTube("joint", {path:path, radius:rad, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
+            sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -344,6 +373,13 @@ class Component {
         }
     }
 
+    //deselect component connections
+    deselectConnections() {
+        for (let i = 0; i < this.connections.length; i++) {
+            this.connections[i].deselect();
+        }
+    }
+
     //set up component visuals
     setupVisuals() {
         //initialize mesh material
@@ -446,9 +482,7 @@ class Stem extends Component {
         this.numFillPts = numFillPts; //# of points defining fillet arc resolution
 
         //create tube
-        const tubePath = [
-            new BABYLON.Vector3(0, 0, 0)
-        ]
+        const tubePath = [new BABYLON.Vector3(0, 0, 0)];
         for (let i = 0; i <= numFillPts; i++) { //fillet arc
             tubePath.push(new BABYLON.Vector3(lenStem/2-radFill*Math.tan(angleBend*Math.PI/360)+radFill*Math.sin(i*angleBend*Math.PI/180/numFillPts), 0, 
                 radFill*(1-Math.cos(i*angleBend*Math.PI/180/numFillPts))));
@@ -481,7 +515,7 @@ class Stem extends Component {
 
         //merge meshes
         this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn, femConn, cap], true, true, undefined, false, false);
-        this.mesh.addRotation(-Math.PI/2, Math.PI/2, 0); //rotate to default orientation
+        this.mesh.addRotation(-Math.PI/2, Math.PI/2, Math.PI); //rotate to default orientation
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -492,6 +526,12 @@ class Stem extends Component {
         this.mesh.disableEdgesRendering();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
+
+        //create connections
+        const offset = 0.05;
+        this.connections.push(new Joint(scene, this, "female", [x-offset, y, z, ax, ay, az-90], radStem+offset, numArcPts, lenConn+offset));
+        this.connections.push(new Joint(scene, this, "male", [x+(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), y, z+(lenStem/2)*Math.sin(angleBend*Math.PI/180), 
+            ax+90, ay, az-90], radStem+offset, numArcPts, lenConn+offset));
     }
 }
 
@@ -744,6 +784,13 @@ class Tree {
         }
     }
 
+    //deselect specified components connections
+    deselectConnections(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].deselectConnections();
+        }
+    }
+
     //set up tree controls & responses
     setupControls() {
         //keyboard controls
@@ -754,6 +801,7 @@ class Tree {
                         //escape key deselects components
                         case "Escape":
                             this.deselect(this.components);
+                            this.deselectConnections(this.components);
                         break
                         case "a":
                         case "A":
@@ -768,6 +816,7 @@ class Tree {
                         break
                         case "Tab":
                             this.toggleConnections(this.components);
+                            this.deselectConnections(this.components);
                         break
                     }
                 break;
