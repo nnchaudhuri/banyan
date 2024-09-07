@@ -1,4 +1,4 @@
-//define pill shape
+//define pill shape (Vector3 array)
 function pillShape(rad, len, startX, startZ, numArcPts) {
     pill = [];
 
@@ -106,13 +106,6 @@ class Connection {
     select() {
         //update properties
         this.selected = true;
-        /*FIX
-        const index = this.tree.selComponentIDs.indexOf(this.ID);
-        if (index < 0) {
-            this.tree.selComponents.push(this);
-            this.tree.selComponentIDs.push(this.ID);
-        }
-        */
 
         //selection coloring
         this.defMat.diffuseColor = this.selCol;
@@ -124,13 +117,6 @@ class Connection {
     deselect() {
         //update properties
         this.selected = false;
-        /*FIX
-        const index = this.tree.selComponentIDs.indexOf(this.ID);
-        if (index > -1) {
-            this.tree.selComponentIDs.splice(index, 1);
-            this.tree.selComponents.splice(index, 1);
-        }
-        */
 
         //default coloring
         this.defMat.diffuseColor = this.defCol;
@@ -186,7 +172,7 @@ class Edge extends Connection {
 
 //define joint class (end connection of stem component)
 class Joint extends Connection {
-    constructor(scene, component, ID, [x, y, z, ax, ay, az], rad, numArcPts, len) {
+    constructor(scene, component, ID, [x, y, z, ax, ay, az], rad, len, numArcPts) {
         super(scene, component, ID, [x, y, z, ax, ay, az]);
 
         //initialize properties
@@ -199,6 +185,29 @@ class Joint extends Connection {
         ];
         this.mesh = BABYLON.MeshBuilder.CreateTube("joint", {path:path, radius:rad, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+
+        //set starting position & rotation
+        this.move(x, y, z);
+        this.rotate(ax, ay, az);
+
+        //set up visuals & controls
+        this.setupVisuals();
+        this.mesh.actionManager = new BABYLON.ActionManager(scene);
+        this.setupControls();
+    }
+}
+
+//define hole class (hole connections in branch & trunk components)
+class Hole extends Connection {
+    constructor(scene, component, ID, [x, y, z, ax, ay, az], rad, depth, numArcPts) {
+        super(scene, component, ID, [x, y, z, ax, ay, az]);
+
+        //initialize properties
+        this.type = "hole"; //connection type
+
+        //create mesh
+        const shape = pillShape(rad, 0, 0, 0, numArcPts);
+        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("hole", {shape:shape, depth:depth, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -541,9 +550,9 @@ class Stem extends Component {
 
         //create connections
         const offset = 0.05;
-        this.connections.push(new Joint(scene, this, "female", [x-offset, y, z, ax, ay, az-90], radStem+offset, numArcPts, lenConn+offset));
+        this.connections.push(new Joint(scene, this, "female", [x-offset, y, z, ax, ay, az-90], radStem+offset, lenConn+offset, numArcPts));
         this.connections.push(new Joint(scene, this, "male", [x+(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), y, z+(lenStem/2)*Math.sin(angleBend*Math.PI/180), 
-            ax+90, ay, az-90], radStem+offset, numArcPts, lenConn+offset));
+            ax+90, ay, az-90], radStem+offset, lenConn+offset, numArcPts));
     }
 }
 
@@ -692,6 +701,17 @@ class Trunk extends Component {
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
+
+        //create connections
+        /*FIX
+        for (let j = 0; j < numRibs; j++) {
+            const k = 0;
+            for (let i = 0; i <= lenTrunk; i += spacHole) {
+                this.connections.push(new Hole(scene, this, j.toString()+","+k.toString(), [x+i, y+j*(thickRib+spacRib), z, ax, ay, az], radHole, thickRib, numArcPts));
+                k++;
+            }
+        }
+        */
     }
 }
 
