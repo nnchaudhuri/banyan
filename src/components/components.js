@@ -58,7 +58,7 @@ class Connection {
         this.selMat.alpha = alpha;
     }
 
-    //move connection (globally)
+    //move connection (globally) FIX!
     move(dx, dy, dz) {
         //update position properties
         this.x += dx;
@@ -69,7 +69,7 @@ class Connection {
         this.mesh.translate(new BABYLON.Vector3(dx, dy, dz), 1, BABYLON.Space.WORLD);
     }
 
-    //rotate connection (in degrees, about local origin)
+    //rotate connection (in degrees, about local origin) FIX!
     rotate(rx, ry, rz) {
         //update rotation properties
         this.ax += rx;
@@ -170,7 +170,7 @@ class Edge extends Connection {
     }
 }
 
-//define joint class (end connection of stem component)
+//define joint class (end connection of stem component & circle hole connections in branch & trunk components)
 class Joint extends Connection {
     constructor(scene, component, ID, [x, y, z, ax, ay, az], rad, len, numArcPts) {
         super(scene, component, ID, [x, y, z, ax, ay, az]);
@@ -197,16 +197,16 @@ class Joint extends Connection {
     }
 }
 
-//define hole class (hole connections in branch & trunk components)
-class Hole extends Connection {
-    constructor(scene, component, ID, [x, y, z, ax, ay, az], rad, depth, numArcPts) {
+//define slot class (slotted hole connections in branch component) FIX!
+class Slot extends Connection {
+    constructor(scene, component, ID, [x, y, z, ax, ay, az], rad, len, depth, numArcPts) {
         super(scene, component, ID, [x, y, z, ax, ay, az]);
 
         //initialize properties
-        this.type = "hole"; //connection type
+        this.type = "slot"; //connection type
 
         //create mesh
-        const shape = pillShape(rad, 0, 0, 0, numArcPts);
+        const shape = pillShape(rad, len, 0, 0, numArcPts);
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("hole", {shape:shape, depth:depth, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         //set starting position & rotation
@@ -269,7 +269,7 @@ class Component {
         this.selMat.diffuseColor = this.selCol;
     }
 
-    //move component (globally)
+    //move component (globally) FIX!
     move(dx, dy, dz) {
         //update position properties
         this.x += dx;
@@ -280,7 +280,7 @@ class Component {
         this.mesh.translate(new BABYLON.Vector3(dx, dy, dz), 1, BABYLON.Space.WORLD);
     }
 
-    //rotate component (in degrees, about local origin)
+    //rotate component (in degrees, about local origin) FIX!
     rotate(rx, ry, rz) {
         //update rotation properties
         this.ax += rx;
@@ -549,7 +549,7 @@ class Stem extends Component {
         this.setupControls();
 
         //create connections
-        const offset = 0.05;
+        const offset = 0.005;
         this.connections.push(new Joint(scene, this, "female", [x-offset, y, z, ax, ay, az-90], radStem+offset, lenConn+offset, numArcPts));
         this.connections.push(new Joint(scene, this, "male", [x+(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), y, z+(lenStem/2)*Math.sin(angleBend*Math.PI/180), 
             ax+90, ay, az-90], radStem+offset, lenConn+offset, numArcPts));
@@ -703,15 +703,13 @@ class Trunk extends Component {
         this.setupControls();
 
         //create connections
-        /*FIX
         for (let j = 0; j < numRibs; j++) {
-            const k = 0;
+            let k = 0;
             for (let i = 0; i <= lenTrunk; i += spacHole) {
-                this.connections.push(new Hole(scene, this, j.toString()+","+k.toString(), [x+i, y+j*(thickRib+spacRib), z, ax, ay, az], radHole, thickRib, numArcPts));
+                this.connections.push(new Joint(scene, this, j.toString+","+k.toString(), [x+i, y-edgeRib-thickRib-j*(thickRib+spacRib), z, ax, ay, az], radHole, thickRib, numArcPts));
                 k++;
             }
         }
-        */
     }
 }
 
