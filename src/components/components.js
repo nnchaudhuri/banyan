@@ -137,9 +137,6 @@ class Connection {
 
     //set up connection controls & responses
     setupControls() {
-        //assign component mesh as parent of connection mesh
-        this.mesh.parent = this.component.mesh;
-
         //hover over connection
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this.mesh, "material", this.defMat));
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this.mesh, "material", this.hovMat));
@@ -405,6 +402,13 @@ class Component {
         }
     }
 
+    //sets the component mesh as the parent of the connection meshes
+    parentConnections() {
+        for (let i = 0; i < this.connections.length; i++) {
+            this.connections[i].mesh.parent = this.mesh;
+        }
+    }
+
     //set up component visuals
     setupVisuals() {
         //initialize mesh material
@@ -441,7 +445,7 @@ class Component {
         this.ryGizmo.snapDistance = this.snapRot*Math.PI/180;
         this.rzGizmo.snapDistance = this.snapRot*Math.PI/180;
 
-        //update component position & rotation properties per gizmo events
+        //update component position & rotation properties per gizmo events FIX!
         this.dxGizmo.onSnapObservable.add(event => {this.x += event.snapDistance});
         this.dyGizmo.onSnapObservable.add(event => {this.y += event.snapDistance});
         this.dzGizmo.onSnapObservable.add(event => {this.z += event.snapDistance});
@@ -478,6 +482,7 @@ class Leaf extends Component {
         this.connections.push(new Edge(scene, this, "top", [0, lenY/2, 0, 0, 0, 90], lenX));
         this.connections.push(new Edge(scene, this, "left", [-lenX/2, 0, 0, 0, 0, 0], lenY));
         this.connections.push(new Edge(scene, this, "bottom", [0, -lenY/2, 0, 0, 0, 90], lenX));
+        this.parentConnections();
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -516,7 +521,7 @@ class Stem extends Component {
         var tube = BABYLON.MeshBuilder.CreateTube("tube", {path:tubePath, radius:radStem, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
-        //create male connection
+        //create male mesh
         const maleConnPath = [
             new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)),
             new BABYLON.Vector3((lenStem/2)+(lenStem/2+lenConn)*(Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180))
@@ -524,7 +529,7 @@ class Stem extends Component {
         var maleConn = BABYLON.MeshBuilder.CreateTube("maleConn", {path:maleConnPath, radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
-        //create female connection
+        //create female mesh
         const femConnPath = [
             new BABYLON.Vector3(0, 0, 0),
             new BABYLON.Vector3(lenConn, 0, 0)
@@ -547,6 +552,7 @@ class Stem extends Component {
         this.connections.push(new Joint(scene, this, "female", [offset, 0, 0, 0, 0, 90], radStem+offset, lenConn+offset, numArcPts));
         this.connections.push(new Joint(scene, this, "male", [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), 
             angleBend, 0, -90], radStem+offset, lenConn+offset, numArcPts));
+        this.parentConnections();
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -584,13 +590,21 @@ class Branch extends Component {
             //left circle hole is local origin
             const leftHole = pillShape(radHole, 0, 0, 0, numArcPts);
             holes.push(leftHole);
+                //create connection
+                this.connections.push(new Joint(scene, this, "left", [0, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts));
 
             //slot holes, max length
             let spacRem = lenBranch-2*spacHole;
             let startSlot = spacHole;
+            let k = 0;
             while (spacRem >= lenSlot) {
                 const slotHole = pillShape(radHole, lenSlot, startSlot, 0, numArcPts);
                 holes.push(slotHole);
+
+                //create connection
+                this.connections.push(new Slot(scene, this, k.toString(), [startSlot, 0, 0, 0, 0, 0], radHole, lenSlot, thickBranch, numArcPts));
+                k++;
+
                 spacRem -= (lenSlot+spacHole);
                 startSlot += lenSlot+spacHole;
             }
@@ -598,14 +612,21 @@ class Branch extends Component {
             //slot holes, shorter
             const slotHole = pillShape(radHole, spacRem, startSlot, 0, numArcPts);
             holes.push(slotHole);
+                //create connection
+                this.connections.push(new Slot(scene, this, k.toString(), [startSlot, 0, 0, 0, 0, 0], radHole, spacRem, thickBranch, numArcPts));
 
             //right circle hole
             const rightHole = pillShape(radHole, 0, lenBranch, 0, numArcPts);
             holes.push(rightHole);
+                //create connection
+                this.connections.push(new Joint(scene, this, "right", [lenBranch, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts));
 
         //extrude & create mesh
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("branch", {shape:profile, holes:holes, depth:thickBranch, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
+
+        //set connections parent
+        this.parentConnections();
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -682,9 +703,15 @@ class Trunk extends Component {
 
             //holes
             const holes = [];
+            let k = 0;
             for (let i = 0; i <= lenTrunk; i += spacHole) {
                 const hole = pillShape(radHole, 0, i, 0, numArcPts);
                 holes.push(hole);
+
+                //create connection
+                this.connections.push(new Joint(scene, this, j.toString+","+k.toString(), [i, -edgeRib-thickRib-j*(thickRib+spacRib), 0, 0, 0, 0], 
+                    radHole, thickRib, numArcPts));
+                k++;
             }
 
             //extrude & create mesh
@@ -697,15 +724,8 @@ class Trunk extends Component {
         this.mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true, undefined, false, false);
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
-        //create connections
-        for (let j = 0; j < numRibs; j++) {
-            let k = 0;
-            for (let i = 0; i <= lenTrunk; i += spacHole) {
-                this.connections.push(new Joint(scene, this, j.toString+","+k.toString(), [i, -edgeRib-thickRib-j*(thickRib+spacRib), 0, 0, 0, 0], 
-                    radHole, thickRib, numArcPts));
-                k++;
-            }
-        }
+        //set connections parent
+        this.parentConnections();
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -887,6 +907,7 @@ class Tree {
                             this.deselect(this.components);
                             this.hideGizmos(this.components);
                             this.deselectConnections(this.components);
+                            this.hideConnections(this.components);
                         break
                         
                         //delete key deletes selected components
