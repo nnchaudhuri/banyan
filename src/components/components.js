@@ -27,12 +27,12 @@ class Connection {
         this.scene = scene; //scene hosting connection
         this.component = component; //component the connection is a part of
         this.ID = ID; //connection ID
-        this.x = 0; //x position (of local origin), initialize to 0 as specific components set starting position & rotation
-        this.y = 0; //y position (of local origin), initialize to 0 as specific components set starting position & rotation
-        this.z = 0; //z position (of local origin), initialize to 0 as specific components set starting position & rotation
-        this.ax = 0; //x rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
-        this.ay = 0; //y rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
-        this.az = 0; //z rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
+        this.x = 0; //x position (of local origin), initialize to 0 as specific connections set starting position & rotation
+        this.y = 0; //y position (of local origin), initialize to 0 as specific connections set starting position & rotation
+        this.z = 0; //z position (of local origin), initialize to 0 as specific connections set starting position & rotation
+        this.ax = 0; //x rotation (in degrees, about local origin), initialize to 0 as specific connections set starting position & rotation
+        this.ay = 0; //y rotation (in degrees, about local origin), initialize to 0 as specific connections set starting position & rotation
+        this.az = 0; //z rotation (in degrees, about local origin), initialize to 0 as specific connections set starting position & rotation
         this.type = null; //initialize null connection type
         this.mesh = null; //initialize null mesh
         this.selected = false; //toggle for if connection is selected
@@ -58,7 +58,7 @@ class Connection {
         this.selMat.alpha = alpha;
     }
 
-    //move connection (globally) FIX!
+    //move connection (globally)
     move(dx, dy, dz) {
         //update position properties
         this.x += dx;
@@ -66,7 +66,9 @@ class Connection {
         this.z += dz;
 
         //move mesh
-        this.mesh.translate(new BABYLON.Vector3(dx, dy, dz), 1, BABYLON.Space.WORLD);
+        this.mesh.position.x += dx;
+        this.mesh.position.y += dy;
+        this.mesh.position.z += dz;
     }
 
     //rotate connection (in degrees, about local origin) FIX!
@@ -269,7 +271,7 @@ class Component {
         this.selMat.diffuseColor = this.selCol;
     }
 
-    //move component (globally) FIX!
+    //move component (globally)
     move(dx, dy, dz) {
         //update position properties
         this.x += dx;
@@ -277,7 +279,9 @@ class Component {
         this.z += dz;
 
         //move mesh
-        this.mesh.translate(new BABYLON.Vector3(dx, dy, dz), 1, BABYLON.Space.WORLD);
+        this.mesh.position.x += dx;
+        this.mesh.position.y += dy;
+        this.mesh.position.z += dz;
     }
 
     //rotate component (in degrees, about local origin) FIX!
@@ -469,6 +473,12 @@ class Leaf extends Component {
         this.mesh = BABYLON.MeshBuilder.CreatePlane("leaf", {height:lenY, width:lenX, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
+        //create connections
+        this.connections.push(new Edge(scene, this, "right", [lenX/2, 0, 0, 0, 0, 0], lenY));
+        this.connections.push(new Edge(scene, this, "top", [0, lenY/2, 0, 0, 0, 90], lenX));
+        this.connections.push(new Edge(scene, this, "left", [-lenX/2, 0, 0, 0, 0, 0], lenY));
+        this.connections.push(new Edge(scene, this, "bottom", [0, -lenY/2, 0, 0, 0, 90], lenX));
+
         //set starting position & rotation
         this.move(x, y, z);
         this.rotate(ax, ay, az);
@@ -477,12 +487,6 @@ class Leaf extends Component {
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
-
-        //create connections
-        this.connections.push(new Edge(scene, this, "right", [x+lenX/2, y, z, ax, ay, az], lenY));
-        this.connections.push(new Edge(scene, this, "top", [x, y+lenY/2, z, ax, ay, az+90], lenX));
-        this.connections.push(new Edge(scene, this, "left", [x-lenX/2, y, z, ax, ay, az], lenY));
-        this.connections.push(new Edge(scene, this, "bottom", [x, y-lenY/2, z, ax, ay, az+90], lenX));
     }
 }
 
@@ -537,6 +541,12 @@ class Stem extends Component {
         //merge meshes
         this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn, femConn, cap], true, true, undefined, false, false);
         this.mesh.addRotation(-Math.PI/2, Math.PI/2, Math.PI); //rotate to default orientation
+        
+        //create connections
+        const offset = 0.005;
+        this.connections.push(new Joint(scene, this, "female", [offset, 0, 0, 0, 0, 90], radStem+offset, lenConn+offset, numArcPts));
+        this.connections.push(new Joint(scene, this, "male", [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), 
+            angleBend, 0, -90], radStem+offset, lenConn+offset, numArcPts));
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -547,12 +557,6 @@ class Stem extends Component {
         this.mesh.disableEdgesRendering();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
-
-        //create connections
-        const offset = 0.005;
-        this.connections.push(new Joint(scene, this, "female", [x-offset, y, z, ax, ay, az-90], radStem+offset, lenConn+offset, numArcPts));
-        this.connections.push(new Joint(scene, this, "male", [x+(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), y, z+(lenStem/2)*Math.sin(angleBend*Math.PI/180), 
-            ax+90, ay, az-90], radStem+offset, lenConn+offset, numArcPts));
     }
 }
 
@@ -693,6 +697,16 @@ class Trunk extends Component {
         this.mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true, undefined, false, false);
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
+        //create connections
+        for (let j = 0; j < numRibs; j++) {
+            let k = 0;
+            for (let i = 0; i <= lenTrunk; i += spacHole) {
+                this.connections.push(new Joint(scene, this, j.toString+","+k.toString(), [i, -edgeRib-thickRib-j*(thickRib+spacRib), 0, 0, 0, 0], 
+                    radHole, thickRib, numArcPts));
+                k++;
+            }
+        }
+
         //set starting position & rotation
         this.move(x, y, z);
         this.rotate(ax, ay, az);
@@ -701,15 +715,6 @@ class Trunk extends Component {
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
-
-        //create connections
-        for (let j = 0; j < numRibs; j++) {
-            let k = 0;
-            for (let i = 0; i <= lenTrunk; i += spacHole) {
-                this.connections.push(new Joint(scene, this, j.toString+","+k.toString(), [x+i, y-edgeRib-thickRib-j*(thickRib+spacRib), z, ax, ay, az], radHole, thickRib, numArcPts));
-                k++;
-            }
-        }
     }
 }
 
