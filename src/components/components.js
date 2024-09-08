@@ -920,6 +920,18 @@ class Tree {
                             this.toggleConnections(this.components);
                             this.deselectConnections(this.components);
                         break
+
+                        //l key loads tree file
+                        case "l":
+                        case "L":
+                            this.load();
+                        break
+
+                        //s key saves tree file
+                        case "s":
+                        case "S":
+                            this.save();
+                        break
                     }
                 break;
             }
