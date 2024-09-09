@@ -79,9 +79,9 @@ class Connection {
         this.az += rz;
 
         //rotate mesh
-        this.mesh.addRotation(0, 0, rz*Math.PI/180);
-        this.mesh.addRotation(0, ry*Math.PI/180, 0);
-        this.mesh.addRotation(rx*Math.PI/180, 0, 0);
+        this.mesh.rotate(new BABYLON.Vector3(-1, 0, 0), rx*Math.PI/180, BABYLON.Space.WORLD);
+        this.mesh.rotate(new BABYLON.Vector3(0, -1, 0), ry*Math.PI/180, BABYLON.Space.WORLD);
+        this.mesh.rotate(new BABYLON.Vector3(0, 0, 1), rz*Math.PI/180, BABYLON.Space.WORLD);
     }
 
     //show connection
@@ -238,6 +238,7 @@ class Component {
         this.selected = false; //toggle for if component is selected
 
         //initialize gizmos
+        this.inclGizmos = [true, true, true, false, false, false]; //array of which gizmos to include [dx, dy, dz, rx, ry, rz]
         this.dxGizmo = null;
         this.dyGizmo = null;
         this.dzGizmo = null;
@@ -289,9 +290,9 @@ class Component {
         this.az += rz;
 
         //rotate mesh
-        this.mesh.addRotation(0, 0, rz*Math.PI/180);
-        this.mesh.addRotation(0, ry*Math.PI/180, 0);
-        this.mesh.addRotation(rx*Math.PI/180, 0, 0);
+        this.mesh.rotate(new BABYLON.Vector3(-1, 0, 0), rx*Math.PI/180, BABYLON.Space.WORLD);
+        this.mesh.rotate(new BABYLON.Vector3(0, -1, 0), ry*Math.PI/180, BABYLON.Space.WORLD);
+        this.mesh.rotate(new BABYLON.Vector3(0, 0, 1), rz*Math.PI/180, BABYLON.Space.WORLD);
     }
 
     //show component
@@ -316,12 +317,12 @@ class Component {
 
     //show gizmos
     showGizmos() {
-        this.dxGizmo.attachedMesh = this.mesh;
-        this.dyGizmo.attachedMesh = this.mesh;
-        this.dzGizmo.attachedMesh = this.mesh;
-        this.rxGizmo.attachedMesh = this.mesh;
-        this.ryGizmo.attachedMesh = this.mesh;
-        this.rzGizmo.attachedMesh = this.mesh;
+        if (this.inclGizmos[0]) {this.dxGizmo.attachedMesh = this.mesh};
+        if (this.inclGizmos[1]) {this.dyGizmo.attachedMesh = this.mesh};
+        if (this.inclGizmos[2]) {this.dzGizmo.attachedMesh = this.mesh};
+        if (this.inclGizmos[3]) {this.rxGizmo.attachedMesh = this.mesh};
+        if (this.inclGizmos[4]) {this.ryGizmo.attachedMesh = this.mesh};
+        if (this.inclGizmos[5]) {this.rzGizmo.attachedMesh = this.mesh};
     }
 
     //hide gizmos
@@ -372,6 +373,7 @@ class Component {
 
         //hide gizmos
         this.hideGizmos();
+        if (this.tree.selComponents.length < 1) {this.tree.showingGizmos = false};
     }
 
     //show component connections
@@ -420,11 +422,12 @@ class Component {
         this.mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);
         
         //create outline
-        /*
-        this.mesh.renderOutline = true;
-        this.mesh.outlineColor = new BABYLON.Color3(0, 0, 0);
-        this.mesh.outlineWidth = 0.08;
-        */
+        const showOutline = false;
+        if (showOutline) {
+            this.mesh.renderOutline = true;
+            this.mesh.outlineColor = new BABYLON.Color3(0, 0, 0);
+            this.mesh.outlineWidth = 0.08;
+        }
     }
 
     //set up component controls & responses
@@ -444,6 +447,14 @@ class Component {
         this.rxGizmo.snapDistance = this.snapRot*Math.PI/180;
         this.ryGizmo.snapDistance = this.snapRot*Math.PI/180;
         this.rzGizmo.snapDistance = this.snapRot*Math.PI/180;
+
+        //maintain global axes for gizmo orientation
+        this.dxGizmo.updateGizmoRotationToMatchAttachedMesh = false;
+        this.dyGizmo.updateGizmoRotationToMatchAttachedMesh = false;
+        this.dzGizmo.updateGizmoRotationToMatchAttachedMesh = false;
+        this.rxGizmo.updateGizmoRotationToMatchAttachedMesh = false;
+        this.ryGizmo.updateGizmoRotationToMatchAttachedMesh = false;
+        this.rzGizmo.updateGizmoRotationToMatchAttachedMesh = false;
 
         //update component position & rotation properties per gizmo events FIX!
         this.dxGizmo.onSnapObservable.add(event => {this.x += event.snapDistance});
@@ -492,6 +503,7 @@ class Leaf extends Component {
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
+        this.inclGizmos = [true, true, true, false, false, true]; //array of which gizmos to include [dx, dy, dz, rx, ry, rz]
     }
 }
 
@@ -549,9 +561,9 @@ class Stem extends Component {
         
         //create connections
         const offset = 0.005;
-        this.connections.push(new Joint(scene, this, "female", [offset, 0, 0, 0, 0, 90], radStem+offset, lenConn+offset, numArcPts));
+        this.connections.push(new Joint(scene, this, "female", [lenConn-offset, 0, 0, 0, 0, 90], radStem+offset, lenConn+offset, numArcPts));
         this.connections.push(new Joint(scene, this, "male", [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), 
-            angleBend, 0, -90], radStem+offset, lenConn+offset, numArcPts));
+            -angleBend, 0, -90], radStem+offset, lenConn+offset, numArcPts));
         this.parentConnections();
 
         //set starting position & rotation
@@ -563,6 +575,7 @@ class Stem extends Component {
         this.mesh.disableEdgesRendering();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
+        this.inclGizmos = [true, true, true, true, false, false]; //array of which gizmos to include [dx, dy, dz, rx, ry, rz]
     }
 }
 
@@ -636,6 +649,7 @@ class Branch extends Component {
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
+        this.inclGizmos = [true, true, true, false, false, true]; //array of which gizmos to include [dx, dy, dz, rx, ry, rz]
     }
 }
 
@@ -735,6 +749,7 @@ class Trunk extends Component {
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
+        this.inclGizmos = [true, true, true, false, false, true]; //array of which gizmos to include [dx, dy, dz, rx, ry, rz]
     }
 }
 
@@ -810,7 +825,7 @@ class Tree {
         for (let i = 0; i < components.length; i++) {
             components[i].showGizmos();
         }
-        this.showingGizmos = true;
+        if (components.length > 0) {this.showingGizmos = true};
     }
 
     //hide specified components gizmos
@@ -818,7 +833,7 @@ class Tree {
         for (let i = 0; i < components.length; i++) {
             components[i].hideGizmos();
         }
-        this.showingGizmos = false;
+        if (components.length > 0) {this.showingGizmos = false};
     }
 
     //toggle specified components gizmos visibility
