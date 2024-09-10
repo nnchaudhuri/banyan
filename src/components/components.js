@@ -235,7 +235,12 @@ class Component {
         this.type = null; //initialize null component type
         this.mesh = null; //initialize null mesh
         this.connections = []; //initialize empty connections array
+        this.BB = []; //initialize empty bounding boxes array (for mesh intersection detection)
+        this.BBOffset = 0.1; //offset for bounding boxes from mesh edges
+        this.hovering = false; //toggle for if component is being hovered over
         this.selected = false; //toggle for if component is selected
+        this.intersecting = false; //toggle for if component is intersecting another component
+        this.transparent = false; //toggle for component transparency
 
         //initialize gizmos
         this.inclGizmos = [true, true, true, false, false, false]; //array of which gizmos to include [dx, dy, dz, rx, ry, rz]
@@ -267,6 +272,11 @@ class Component {
         this.selMat = new BABYLON.StandardMaterial("selMat", scene);
         this.selCol = new BABYLON.Color3(0, 1, 0);
         this.selMat.diffuseColor = this.selCol;
+
+        //intersected material
+        this.intMat = new BABYLON.StandardMaterial("intMat", scene);
+        this.intCol = new BABYLON.Color3(1, 0, 0);
+        this.intMat.diffuseColor = this.intCol;
     }
 
     //move component (globally)
@@ -404,10 +414,59 @@ class Component {
         }
     }
 
-    //sets the component mesh as the parent of the connection meshes
+    //set the component mesh as the parent of the connection meshes
     parentConnections() {
         for (let i = 0; i < this.connections.length; i++) {
             this.connections[i].mesh.parent = this.mesh;
+        }
+    }
+
+    //set the component mesh as the parent of the BB meshes
+    parentBB() {
+        for (let i = 0; i < this.BB.length; i++) {
+            this.BB[i].parent = this.mesh;
+        }
+    }
+        
+    //check for mesh intersection between this & another component based on bounding boxes
+    intersects(component) {
+        for (let j = 0; j < this.BB.length; j++) {
+            for (let i = 0; i < component.BB.length; i++) {
+                if (this.BB[j].intersectsMesh(component.BB[i], true)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    //sets the component materials opaque
+    opaque() {
+        this.defMat.alpha = 1;
+        this.hovMat.alpha = 1;
+        this.selMat.alpha = 1;
+        this.intMat.alpha = 1;
+        this.mesh.material.alpha = 1;
+        this.transparent = false;
+    }
+
+    //sets the component materials transparent (xray)
+    xray() {
+        const alpha = 0.5;
+        this.defMat.alpha = alpha;
+        this.hovMat.alpha = alpha;
+        this.selMat.alpha = alpha;
+        this.intMat.alpha = alpha;
+        this.mesh.material.alpha = alpha;
+        this.transparent = true;
+    }
+
+    //toggle component transparency
+    toggleTransparency() {
+        if (this.transparent) {
+            this.opaque();
+        } else {
+            this.xray();
         }
     }
 
@@ -687,6 +746,17 @@ class Trunk extends Component {
         tile.addRotation(Math.PI/2, 0, 0);
         tile.translate(new BABYLON.Vector3(0, 0, 2*radRib), 1, BABYLON.Space.WORLD);
         meshes.push(tile);
+            //tile bounding box
+            const rectBB = [
+                new BABYLON.Vector3(-2*radRib-overhang+this.BBOffset, 0, this.BBOffset),
+                new BABYLON.Vector3(-2*radRib-overhang+this.lenTile-this.BBOffset, 0, this.BBOffset),
+                new BABYLON.Vector3(-2*radRib-overhang+this.lenTile-this.BBOffset, 0, widthTile-this.BBOffset),
+                new BABYLON.Vector3(-2*radRib-overhang+this.BBOffset, 0, widthTile-this.BBOffset)
+            ];
+            const tileBB = BABYLON.MeshBuilder.ExtrudePolygon("tileBB", {shape:rectBB, depth:thickTile-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+            tileBB.addRotation(Math.PI/2, 0, 0);
+            tileBB.translate(new BABYLON.Vector3(0, 0, 2*radRib-this.BBOffset), 1, BABYLON.Space.WORLD);
+            this.BB.push(tileBB);
 
         //create ribs
         for (let j = 0; j < numRibs; j++) {
@@ -738,8 +808,9 @@ class Trunk extends Component {
         this.mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true, undefined, false, false);
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
-        //set connections parent
+        //set parent for connections & BB
         this.parentConnections();
+        this.parentBB();
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -887,6 +958,52 @@ class Tree {
         }
     }
 
+    //checks for intersections between specified components
+    checkIntersections(components) {
+        for (let j = 0; j < components.length; j++) {
+            for (let i = 0; i < components.length; i++) {
+                const c = components[i];
+                if (i != j) {
+                    if (c.intersects(components[j])) {
+                        c.mesh.material = c.intMat;
+                        c.intersecting = true;
+                        break;
+                    } else {
+                        if (c.selected) {
+                            c.mesh.material = c.selMat;
+                        } else if (c.hovering) {
+                            c.mesh.material = c.hovMat;
+                        } else {
+                            c.mesh.material = c.defMat;
+                        }
+                        c.intersecting = false;
+                    }
+                }
+            }
+        }
+    }
+
+    //set the specified components materials opaque
+    opaque(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].opaque();
+        }
+    }
+
+    //set the specified components materials transparent (xray)
+    xray(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].xray();
+        }
+    }
+
+    //toggle specified components transparency
+    toggleTransparency(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].toggleTransparency();
+        }
+    }
+
     //set up tree controls & responses
     setupControls() {
         //default gizmo visibility
@@ -936,6 +1053,12 @@ class Tree {
                             this.deselectConnections(this.components);
                         break
 
+                        //t key toggles transparency for all components
+                        case "t":
+                        case "T":
+                            this.toggleTransparency(this.components);
+                        break
+
                         //l key loads tree file
                         case "l":
                         case "L":
@@ -950,7 +1073,7 @@ class Tree {
                     }
                 break;
             }
-        })
+        });
     }
 
     //save tree file
@@ -1107,15 +1230,20 @@ const createScene = async function () { //for debugging
     const numFillPts = 32; //# of points defining fillet arc resolution
 
     //create test tree
-    testTree = new Tree(scene, snapDist, snapRot, numArcPts, numFillPts);
+    tree = new Tree(scene, snapDist, snapRot, numArcPts, numFillPts);
     /*
-    testTree.add(new Leaf(scene, testTree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenX, lenY));
-    testTree.add(new Stem(scene, testTree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts));
-    testTree.add(new Branch(scene, testTree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts));
-    testTree.add(new Trunk(scene, testTree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, 
+    tree.add(new Leaf(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenX, lenY));
+    tree.add(new Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts));
+    tree.add(new Branch(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts));
+    tree.add(new Trunk(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, 
         radHole, spacHole, overhang, numArcPts));
     */
-    testTree.load();
+    tree.load();
+
+    //check for component intersections
+    scene.registerBeforeRender(function() {
+        tree.checkIntersections(tree.components);
+    });
 
 	return scene;
 }
