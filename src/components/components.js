@@ -1240,7 +1240,7 @@ const createScene = async function () { //for debugging
     const numFillPts = 32; //# of points defining fillet arc resolution
 
     //create test tree
-    tree = new Tree(scene, snapDist, snapRot, numArcPts, numFillPts);
+    const tree = new Tree(scene, snapDist, snapRot, numArcPts, numFillPts);
     /*
     tree.add(new Leaf(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenX, lenY));
     tree.add(new Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts));
