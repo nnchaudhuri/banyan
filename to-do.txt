@@ -1,0 +1,36 @@
+FUNCTIONAL - NEED:
+highlight components in collision with one another
+library of components to drag into play space
+check stability of tree
+structural analysis of tree
+	
+
+
+FUNCTIONAL - WANT:
+make copied components visibly selected after copying (currently hidden behind duplicate mesh)
+create connect connections feature with clicking on connections
+make gizmo attachable to either end of component
+create parent nodes for selecting & moving multiple components
+add drag select feature
+create smart snapping for component movement
+	highlight faces to signify smart snapping
+make arrow keys for movement rotate 90 deg
+add checks for file loading to ensure parameters acceptable
+make file saving window
+implement click drag copy feature
+enable all axes rotations
+	use ordered array of rotations stored for each component
+
+
+COSMETIC - NEED:
+
+
+COSMETIC - WANT:
+make gizmo custom mesh
+improve outline aesthetic
+add fabric behavior to leaf class
+
+
+CODE - STYLE:
+make mesh intersection rendering more object-oriented
+remove uneccesary class properties and rely and const and passing from constructor
