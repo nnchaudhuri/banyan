@@ -86,17 +86,21 @@ class Connection {
 
     //show connection
     show() {
-        this.mesh.setEnabled(true);
+        this.mesh.isVisible = true;
     }
 
     //hide connection
     hide() {
-        this.mesh.setEnabled(false);
+        this.mesh.isVisible = false;
     }
 
     //toggle connection visibility
     toggle() {
-        this.mesh.setEnabled((this.mesh.isEnabled() ? false : true));
+        if (this.mesh.isVisible) {
+            this.mesh.isVisible = false;
+        } else {
+            this.mesh.isVisible = true;
+        }
     }
 
     //delete connection
@@ -307,17 +311,21 @@ class Component {
 
     //show component
     show() {
-        this.mesh.setEnabled(true);
+        this.mesh.isVisible = true;
     }
 
     //hide component
     hide() {
-        this.mesh.setEnabled(false);
+        this.mesh.isVisible = false;
     }
 
     //toggle component visibility
     toggle() {
-        this.mesh.setEnabled((this.mesh.isEnabled() ? false : true));
+        if (this.mesh.isVisible) {
+            this.mesh.isVisible = false;
+        } else {
+            this.mesh.isVisible = true;
+        }
     }
 
     //delete component
@@ -355,11 +363,6 @@ class Component {
             this.tree.selComponentIDs.push(this.ID);
         }
 
-        //selection coloring
-        this.defMat.diffuseColor = this.selCol;
-        this.hovMat.diffuseColor = this.selCol;
-        this.mesh.material = this.selMat;
-
         //show gizmos
         if (this.tree.showingGizmos) {
             this.showGizmos();
@@ -375,11 +378,6 @@ class Component {
             this.tree.selComponentIDs.splice(index, 1);
             this.tree.selComponents.splice(index, 1);
         }
-
-        //default coloring
-        this.defMat.diffuseColor = this.defCol;
-        this.hovMat.diffuseColor = this.hovCol;
-        this.mesh.material = this.defMat;
 
         //hide gizmos
         this.hideGizmos();
@@ -489,6 +487,19 @@ class Component {
         }
     }
 
+    //updates component visuals
+    updateVisuals() {
+        if (this.intersecting) {
+            this.mesh.material = this.intMat;
+        } else if (this.selected) {
+            this.mesh.material = this.selMat;
+        } else if (this.hovering) {
+            this.mesh.material = this.hovMat;
+        } else {
+            this.mesh.material = this.defMat;
+        }
+    }
+
     //set up component controls & responses
     setupControls() {
         //create gizmos
@@ -524,8 +535,8 @@ class Component {
         this.rzGizmo.onSnapObservable.add(event => {this.az += Math.round(event.snapDistance*180/Math.PI)});
 
         //hover over component
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this.mesh, "material", this.defMat));
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this.mesh, "material", this.hovMat));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this, "hovering", false));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this, "hovering", true));
 
         //click (select) component
         this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.select()}))
@@ -756,6 +767,7 @@ class Trunk extends Component {
             const tileBB = BABYLON.MeshBuilder.ExtrudePolygon("tileBB", {shape:rectBB, depth:thickTile-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
             tileBB.addRotation(Math.PI/2, 0, 0);
             tileBB.translate(new BABYLON.Vector3(0, 0, 2*radRib-this.BBOffset), 1, BABYLON.Space.WORLD);
+            tileBB.isVisible = false;
             this.BB.push(tileBB);
 
         //create ribs
@@ -962,21 +974,12 @@ class Tree {
     checkIntersections(components) {
         for (let j = 0; j < components.length; j++) {
             for (let i = 0; i < components.length; i++) {
-                const c = components[i];
                 if (i != j) {
-                    if (c.intersects(components[j])) {
-                        c.mesh.material = c.intMat;
-                        c.intersecting = true;
+                    if (components[j].intersects(components[i])) {
+                        components[j].intersecting = true;
                         break;
                     } else {
-                        if (c.selected) {
-                            c.mesh.material = c.selMat;
-                        } else if (c.hovering) {
-                            c.mesh.material = c.hovMat;
-                        } else {
-                            c.mesh.material = c.defMat;
-                        }
-                        c.intersecting = false;
+                        components[j].intersecting = false;
                     }
                 }
             }
@@ -1001,6 +1004,13 @@ class Tree {
     toggleTransparency(components) {
         for (let i = 0; i < components.length; i++) {
             components[i].toggleTransparency();
+        }
+    }
+
+    //updates specified components visuals
+    updateVisuals(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].updateVisuals();
         }
     }
 
@@ -1240,9 +1250,10 @@ const createScene = async function () { //for debugging
     */
     tree.load();
 
-    //check for component intersections
+    //component render updates
     scene.registerBeforeRender(function() {
         tree.checkIntersections(tree.components);
+        tree.updateVisuals(tree.components);
     });
 
 	return scene;
