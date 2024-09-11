@@ -563,7 +563,10 @@ class Leaf extends Component {
         this.connections.push(new Edge(scene, this, "top", [0, lenY/2, 0, 0, 0, 90], lenX));
         this.connections.push(new Edge(scene, this, "left", [-lenX/2, 0, 0, 0, 0, 0], lenY));
         this.connections.push(new Edge(scene, this, "bottom", [0, -lenY/2, 0, 0, 0, 90], lenX));
+        
+        //set parent for connections & BB
         this.parentConnections();
+        this.parentBB();
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -634,7 +637,10 @@ class Stem extends Component {
         this.connections.push(new Joint(scene, this, "female", [lenConn-offset, 0, 0, 0, 0, 90], radStem+offset, lenConn+offset, numArcPts));
         this.connections.push(new Joint(scene, this, "male", [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), 
             -angleBend, 0, -90], radStem+offset, lenConn+offset, numArcPts));
+        
+        //set parent for connections & BB
         this.parentConnections();
+        this.parentBB();
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -667,6 +673,30 @@ class Branch extends Component {
         //create profile shape
         const profile = pillShape(radBranch, lenBranch, 0, 0, numArcPts);
 
+            //above holes bounding box
+            const above = [
+                new BABYLON.Vector3(0, 0, radBranch-this.BBOffset),
+                new BABYLON.Vector3(lenBranch, 0, radBranch-this.BBOffset),
+                new BABYLON.Vector3(lenBranch, 0, radHole+this.BBOffset),
+                new BABYLON.Vector3(0, 0, radHole+this.BBOffset)
+            ];
+            const aboveBB = BABYLON.MeshBuilder.ExtrudePolygon("aboveBB", {shape:above, depth:thickBranch-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+            aboveBB.translate(new BABYLON.Vector3(0, -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+            aboveBB.isVisible = false;
+            this.BB.push(aboveBB);
+
+            //below holes bounding box
+            const below = [
+                new BABYLON.Vector3(0, 0, -radBranch+this.BBOffset),
+                new BABYLON.Vector3(lenBranch, 0, -radBranch+this.BBOffset),
+                new BABYLON.Vector3(lenBranch, 0, -radHole-this.BBOffset),
+                new BABYLON.Vector3(0, 0, -radHole-this.BBOffset)
+            ];
+            const belowBB = BABYLON.MeshBuilder.ExtrudePolygon("belowBB", {shape:below, depth:thickBranch-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+            belowBB.translate(new BABYLON.Vector3(0, -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+            belowBB.isVisible = false;
+            this.BB.push(belowBB);
+
         //create hole shapes
         const holes = [];
 
@@ -675,6 +705,18 @@ class Branch extends Component {
             holes.push(leftHole);
                 //create connection
                 this.connections.push(new Joint(scene, this, "left", [0, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts));
+
+                //left of holes bounding box
+                const left = [
+                    new BABYLON.Vector3(-radBranch+this.BBOffset, 0, radHole+this.BBOffset),
+                    new BABYLON.Vector3(-radHole-this.BBOffset, 0, radHole+this.BBOffset),
+                    new BABYLON.Vector3(-radHole-this.BBOffset, 0, -radHole-this.BBOffset),
+                    new BABYLON.Vector3(-radBranch+this.BBOffset, 0, -radHole-this.BBOffset)
+                ];
+                const leftBB = BABYLON.MeshBuilder.ExtrudePolygon("leftBB", {shape:left, depth:thickBranch-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                leftBB.translate(new BABYLON.Vector3(0, -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                leftBB.isVisible = false;
+                this.BB.push(leftBB);
 
             //slot holes, max length
             let spacRem = lenBranch-2*spacHole;
@@ -688,6 +730,18 @@ class Branch extends Component {
                 this.connections.push(new Slot(scene, this, k.toString(), [startSlot, 0, 0, 0, 0, 0], radHole, lenSlot, thickBranch, numArcPts));
                 k++;
 
+                //between holes bounding box
+                const btwn = [
+                    new BABYLON.Vector3(startSlot-spacHole+radHole+this.BBOffset, 0, radHole+this.BBOffset),
+                    new BABYLON.Vector3(startSlot-radHole-this.BBOffset, 0, radHole+this.BBOffset),
+                    new BABYLON.Vector3(startSlot-radHole-this.BBOffset, 0, -radHole-this.BBOffset),
+                    new BABYLON.Vector3(startSlot-spacHole+radHole+this.BBOffset, 0, -radHole-this.BBOffset)
+                ];
+                const btwnBB = BABYLON.MeshBuilder.ExtrudePolygon("btwnBB", {shape:btwn, depth:thickBranch-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                btwnBB.translate(new BABYLON.Vector3(0, -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                btwnBB.isVisible = false;
+                this.BB.push(btwnBB);
+
                 spacRem -= (lenSlot+spacHole);
                 startSlot += lenSlot+spacHole;
             }
@@ -698,18 +752,55 @@ class Branch extends Component {
                 //create connection
                 this.connections.push(new Slot(scene, this, k.toString(), [startSlot, 0, 0, 0, 0, 0], radHole, spacRem, thickBranch, numArcPts));
 
+                //left of final slot bounding box
+                const finSlotL = [
+                    new BABYLON.Vector3(startSlot-spacHole+radHole+this.BBOffset, 0, radHole+this.BBOffset),
+                    new BABYLON.Vector3(startSlot-radHole-this.BBOffset, 0, radHole+this.BBOffset),
+                    new BABYLON.Vector3(startSlot-radHole-this.BBOffset, 0, -radHole-this.BBOffset),
+                    new BABYLON.Vector3(startSlot-spacHole+radHole+this.BBOffset, 0, -radHole-this.BBOffset)
+                ];
+                const finSlotLBB = BABYLON.MeshBuilder.ExtrudePolygon("finSlotLBB", {shape:finSlotL, depth:thickBranch-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                finSlotLBB.translate(new BABYLON.Vector3(0, -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                finSlotLBB.isVisible = false;
+                this.BB.push(finSlotLBB);
+
+                //right of final slot bounding box
+                const finSlotR = [
+                    new BABYLON.Vector3(lenBranch-spacHole+radHole+this.BBOffset, 0, radHole+this.BBOffset),
+                    new BABYLON.Vector3(lenBranch-radHole-this.BBOffset, 0, radHole+this.BBOffset),
+                    new BABYLON.Vector3(lenBranch-radHole-this.BBOffset, 0, -radHole-this.BBOffset),
+                    new BABYLON.Vector3(lenBranch-spacHole+radHole+this.BBOffset, 0, -radHole-this.BBOffset)
+                ];
+                const finSlotRBB = BABYLON.MeshBuilder.ExtrudePolygon("finSlotRBB", {shape:finSlotR, depth:thickBranch-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                finSlotRBB.translate(new BABYLON.Vector3(0, -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                finSlotRBB.isVisible = false;
+                this.BB.push(finSlotRBB);
+
             //right circle hole
             const rightHole = pillShape(radHole, 0, lenBranch, 0, numArcPts);
             holes.push(rightHole);
                 //create connection
                 this.connections.push(new Joint(scene, this, "right", [lenBranch, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts));
 
+                //right of holes bounding box
+                const right = [
+                    new BABYLON.Vector3(lenBranch+radHole+this.BBOffset, 0, radHole+this.BBOffset),
+                    new BABYLON.Vector3(lenBranch+radBranch-this.BBOffset, 0, radHole+this.BBOffset),
+                    new BABYLON.Vector3(lenBranch+radBranch-this.BBOffset, 0, -radHole-this.BBOffset),
+                    new BABYLON.Vector3(lenBranch+radHole+this.BBOffset, 0, -radHole-this.BBOffset)
+                ];
+                const rightBB = BABYLON.MeshBuilder.ExtrudePolygon("rightBB", {shape:right, depth:thickBranch-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                rightBB.translate(new BABYLON.Vector3(0, -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                rightBB.isVisible = false;
+                this.BB.push(rightBB);
+
         //extrude & create mesh
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("branch", {shape:profile, holes:holes, depth:thickBranch, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
-        //set connections parent
+        //set parent for connections & BB
         this.parentConnections();
+        this.parentBB();
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -1214,27 +1305,27 @@ class Tree {
 }
 
 //create scene
-const createScene = async function () { //for debugging
-//const createScene = function () {
+//const createScene = async function () { //for debugging
+const createScene = function () {
 	
-    ///*console for debugging
+    /*console for debugging
     await new Promise(r => {
         var s = document.createElement("script");
         s.src = "https://console3.babylonjs.xyz/console3-playground.js";
         document.head.appendChild(s);
         s.onload = r();
     })
-    //*/
+    */
 
     //setup scene
     var scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(1, 1, 1, 1);
 
-    ///*console for debugging
+    /*console for debugging
     var c3 = window.console3;
     c3.create(engine, scene);
     c3.log("scene created");
-    //*/
+    */
 
     //setup camera
 	const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI/4, Math.PI/4, 100, BABYLON.Vector3.Zero());
