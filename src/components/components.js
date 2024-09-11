@@ -757,6 +757,7 @@ class Trunk extends Component {
         tile.addRotation(Math.PI/2, 0, 0);
         tile.translate(new BABYLON.Vector3(0, 0, 2*radRib), 1, BABYLON.Space.WORLD);
         meshes.push(tile);
+
             //tile bounding box
             const rectBB = [
                 new BABYLON.Vector3(-2*radRib-overhang+this.BBOffset, 0, this.BBOffset),
@@ -814,6 +815,69 @@ class Trunk extends Component {
             const rib = BABYLON.MeshBuilder.ExtrudePolygon("rib", {shape:profile, holes:holes, depth:thickRib, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
             rib.translate(new BABYLON.Vector3(0, -edgeRib-j*(thickRib+spacRib), 0), 1, BABYLON.Space.WORLD);
             meshes.push(rib);
+
+                //rib bounding boxes
+                    //above holes
+                    const above = [
+                        new BABYLON.Vector3(-radRib+this.BBOffset, 0, radRib),
+                        new BABYLON.Vector3(lenTrunk+radRib-this.BBOffset, 0, radRib),
+                        new BABYLON.Vector3(lenTrunk+radRib-this.BBOffset, 0, radHole+this.BBOffset),
+                        new BABYLON.Vector3(-radRib+this.BBOffset, 0, radHole+this.BBOffset)
+                    ];
+                    const aboveBB = BABYLON.MeshBuilder.ExtrudePolygon("aboveBB", {shape:above, depth:thickRib-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                    aboveBB.translate(new BABYLON.Vector3(0, -edgeRib-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                    aboveBB.isVisible = false;
+                    this.BB.push(aboveBB);
+
+                    //below holes
+                    const below = [
+                        new BABYLON.Vector3(-radRib+this.BBOffset, 0, -radRib+this.BBOffset),
+                        new BABYLON.Vector3(lenTrunk+radRib-this.BBOffset, 0, -radRib+this.BBOffset),
+                        new BABYLON.Vector3(lenTrunk+radRib-this.BBOffset, 0, -radHole-this.BBOffset),
+                        new BABYLON.Vector3(-radRib+this.BBOffset, 0, -radHole-this.BBOffset)
+                    ];
+                    const belowBB = BABYLON.MeshBuilder.ExtrudePolygon("belowBB", {shape:below, depth:thickRib-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                    belowBB.translate(new BABYLON.Vector3(0, -edgeRib-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                    belowBB.isVisible = false;
+                    this.BB.push(belowBB);
+
+                    //left of holes
+                    const left = [
+                        new BABYLON.Vector3(-radRib+this.BBOffset, 0, radHole+this.BBOffset),
+                        new BABYLON.Vector3(-radHole-this.BBOffset, 0, radHole+this.BBOffset),
+                        new BABYLON.Vector3(-radHole-this.BBOffset, 0, -radHole-this.BBOffset),
+                        new BABYLON.Vector3(-radRib+this.BBOffset, 0, -radHole-this.BBOffset)
+                    ];
+                    const leftBB = BABYLON.MeshBuilder.ExtrudePolygon("leftBB", {shape:left, depth:thickRib-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                    leftBB.translate(new BABYLON.Vector3(0, -edgeRib-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                    leftBB.isVisible = false;
+                    this.BB.push(leftBB);
+
+                    //between holes
+                    for (let i = 0; i < lenTrunk; i += spacHole) {
+                        const btwn = [
+                            new BABYLON.Vector3(i+radHole+this.BBOffset, 0, radHole+this.BBOffset),
+                            new BABYLON.Vector3(i+spacHole-radHole-this.BBOffset, 0, radHole+this.BBOffset),
+                            new BABYLON.Vector3(i+spacHole-radHole-this.BBOffset, 0, -radHole-this.BBOffset),
+                            new BABYLON.Vector3(i+radHole+this.BBOffset, 0, -radHole-this.BBOffset)
+                        ];
+                        const btwnBB = BABYLON.MeshBuilder.ExtrudePolygon("btwnBB", {shape:btwn, depth:thickRib-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                        btwnBB.translate(new BABYLON.Vector3(0, -edgeRib-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                        btwnBB.isVisible = false;
+                        this.BB.push(btwnBB);
+                    }
+
+                    //right of holes
+                    const right = [
+                        new BABYLON.Vector3(lenTrunk+radHole+this.BBOffset, 0, radHole+this.BBOffset),
+                        new BABYLON.Vector3(lenTrunk+radRib-this.BBOffset, 0, radHole+this.BBOffset),
+                        new BABYLON.Vector3(lenTrunk+radRib-this.BBOffset, 0, -radHole-this.BBOffset),
+                        new BABYLON.Vector3(lenTrunk+radHole+this.BBOffset, 0, -radHole-this.BBOffset)
+                    ];
+                    const rightBB = BABYLON.MeshBuilder.ExtrudePolygon("rightBB", {shape:right, depth:thickRib-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                    rightBB.translate(new BABYLON.Vector3(0, -edgeRib-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                    rightBB.isVisible = false;
+                    this.BB.push(rightBB);
         }
 
         //merge meshes
