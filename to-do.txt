@@ -1,8 +1,10 @@
 FUNCTIONAL - NEED:
 highlight components in collision with one another
+enable reflecting ribs along x axis (= rotating 180 degrees on y (vertical) axis)
 library of components to drag into play space
 check stability of tree
 structural analysis of tree
+figure out snapping of components at angles (maybe diff snapping distance for stems?)
 	
 
 
