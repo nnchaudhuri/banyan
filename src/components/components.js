@@ -53,7 +53,7 @@ class Connection {
 
         //selected material
         this.selMat = new BABYLON.StandardMaterial("selMat", scene);
-        this.selCol = new BABYLON.Color3(0, 1, 0);
+        this.selCol = new BABYLON.Color3(1, 0, 1);
         this.selMat.diffuseColor = this.selCol;
         this.selMat.alpha = alpha;
     }
@@ -96,11 +96,7 @@ class Connection {
 
     //toggle connection visibility
     toggle() {
-        if (this.mesh.isVisible) {
-            this.mesh.isVisible = false;
-        } else {
-            this.mesh.isVisible = true;
-        }
+        this.mesh.isVisible = !this.mesh.isVisible;
     }
 
     //delete connection
@@ -239,8 +235,9 @@ class Component {
         this.type = null; //initialize null component type
         this.mesh = null; //initialize null mesh
         this.connections = []; //initialize empty connections array
+        this.showingConnections = false; //toggle for if connections are visible
         this.BB = []; //initialize empty bounding boxes array (for mesh intersection detection)
-        this.BBOffset = 0.1; //offset for bounding boxes from mesh edges
+        this.BBOffset = 0.05; //offset for bounding boxes from mesh edges
         this.hovering = false; //toggle for if component is being hovered over
         this.selected = false; //toggle for if component is selected
         this.intersecting = false; //toggle for if component is intersecting another component
@@ -321,11 +318,7 @@ class Component {
 
     //toggle component visibility
     toggle() {
-        if (this.mesh.isVisible) {
-            this.mesh.isVisible = false;
-        } else {
-            this.mesh.isVisible = true;
-        }
+        this.mesh.isVisible = !this.mesh.isVisible;
     }
 
     //delete component
@@ -389,6 +382,7 @@ class Component {
         for (let i = 0; i < this.connections.length; i++) {
             this.connections[i].show();
         }
+        this.showingConnections = true;
     }
 
     //hide component connections
@@ -396,6 +390,7 @@ class Component {
         for (let i = 0; i < this.connections.length; i++) {
             this.connections[i].hide();
         }
+        this.showingConnections = false;
     }
 
     //toggle component connections visibility
@@ -403,6 +398,7 @@ class Component {
         for (let i = 0; i < this.connections.length; i++) {
             this.connections[i].toggle();
         }
+        this.showingConnections = !this.showingConnections;
     }
 
     //deselect component connections
@@ -563,6 +559,19 @@ class Leaf extends Component {
         this.connections.push(new Edge(scene, this, "top", [0, lenY/2, 0, 0, 0, 90], lenX));
         this.connections.push(new Edge(scene, this, "left", [-lenX/2, 0, 0, 0, 0, 0], lenY));
         this.connections.push(new Edge(scene, this, "bottom", [0, -lenY/2, 0, 0, 0, 90], lenX));
+
+        //bounding box
+        const rectBB = [
+            new BABYLON.Vector3(-lenX/2+this.BBOffset, 0, lenY/2-this.BBOffset),
+            new BABYLON.Vector3(lenX/2-this.BBOffset, 0, lenY/2-this.BBOffset),
+            new BABYLON.Vector3(lenX/2-this.BBOffset, 0, -lenY/2+this.BBOffset),
+            new BABYLON.Vector3(-lenX/2+this.BBOffset, 0, -lenY/2+this.BBOffset)
+        ];
+        const leafBB = BABYLON.MeshBuilder.ExtrudePolygon("leafBB", {shape:rectBB, depth:this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        leafBB.addRotation(-Math.PI/2, 0, 0);
+        leafBB.translate(new BABYLON.Vector3(0, 0, -this.BBOffset/2), 1, BABYLON.Space.WORLD);
+        leafBB.isVisible = false;
+        this.BB.push(leafBB);
         
         //set parent for connections & BB
         this.parentConnections();
@@ -605,6 +614,39 @@ class Stem extends Component {
         tubePath.push(new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)));
         var tube = BABYLON.MeshBuilder.CreateTube("tube", {path:tubePath, radius:radStem, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+
+            //bounding boxes
+            const rectBB = [
+                new BABYLON.Vector3(-radStem+this.BBOffset/2, 0, -radStem+this.BBOffset/2),
+                new BABYLON.Vector3(-radStem+this.BBOffset/2, 0, radStem-this.BBOffset/2),
+                new BABYLON.Vector3(radStem-this.BBOffset/2, 0, radStem-this.BBOffset/2),
+                new BABYLON.Vector3(radStem-this.BBOffset/2, 0, -radStem+this.BBOffset/2)
+            ];
+
+                //pre fillet bounding box
+                const preBB = BABYLON.MeshBuilder.ExtrudePolygon("preBB", {shape:rectBB, depth:lenStem/2-1.1*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                preBB.addRotation(0, 0, Math.PI/2);
+                preBB.translate(new BABYLON.Vector3(1.1*this.BBOffset, 0, 0), 1, BABYLON.Space.WORLD);
+                preBB.isVisible = false;
+                this.BB.push(preBB);
+
+                //fillet bounding box
+                if (angleBend != 0) {
+                    const fillBB = BABYLON.MeshBuilder.ExtrudePolygon("fillBB", {shape:rectBB, depth:2*radFill*Math.sin(angleBend*Math.PI/360), sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                    fillBB.addRotation(0, 0, Math.PI/2);
+                    fillBB.translate(new BABYLON.Vector3(lenStem/2-radFill*Math.tan(angleBend*Math.PI/360), 0, 0), 1, BABYLON.Space.WORLD);
+                    fillBB.addRotation(-angleBend*Math.PI/360, 0, 0);
+                    fillBB.isVisible = false;
+                    this.BB.push(fillBB);
+                }
+
+                //post fillet bounding box
+                const postBB = BABYLON.MeshBuilder.ExtrudePolygon("postBB", {shape:rectBB, depth:lenStem/2+this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                postBB.addRotation(0, 0, Math.PI/2);
+                postBB.translate(new BABYLON.Vector3(lenStem/2, 0, 0), 1, BABYLON.Space.WORLD);
+                postBB.addRotation(-angleBend*Math.PI/180, 0, 0);
+                postBB.isVisible = false;
+                this.BB.push(postBB);
 
         //create male mesh
         const maleConnPath = [
@@ -1035,6 +1077,12 @@ class Tree {
             } else if (c.type == "trunk") {
                 this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
                     c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, this.numArcPts));
+            }
+            if (c.transparent) {
+                this.components[this.components.length-1].xray();
+            }
+            if (c.showingConnections) {
+                this.components[this.components.length-1].showConnections();
             }
         }
     }
