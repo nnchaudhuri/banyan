@@ -858,7 +858,7 @@ class Branch extends Component {
 
 //define trunk class (plank tiles with holed ribs)
 class Trunk extends Component {
-    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, numArcPts) {
+    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, reflected, numArcPts) {
         super(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
@@ -871,11 +871,18 @@ class Trunk extends Component {
         this.thickRib = thickRib; //rib thickness
         this.radRib = radRib; //outer radius of rib profile
         this.spacRib = spacRib; //clear spacing between ribs
-        this.edgeRib = edgeRib; //tile side edge distance before first rib
+        this.edgeRib = edgeRib; //tile side edge distance before first rib (if not reflected)
         this.radHole = radHole; //radius of holes
         this.spacHole = spacHole; //center-to-center spacing between holes
         this.overhang = overhang; //tile end edge distance overhanging rib end
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
+        this.reflected = reflected; //toggle for if trunk is reflected along longitudinal axis
+
+        const edgeRibLast = widthTile-edgeRib-numRibs*thickRib-(numRibs-1)*spacRib; //tile side edge distance after last rib (if not reflected)
+        var edgeRibFirst = edgeRib;
+        if (reflected == 1) {
+            var edgeRibFirst = edgeRibLast;
+        }
 
         const meshes = [];
 
@@ -939,14 +946,14 @@ class Trunk extends Component {
                 holes.push(hole);
 
                 //create connection
-                this.connections.push(new Joint(scene, this, j.toString+","+k.toString(), [i, -edgeRib-thickRib-j*(thickRib+spacRib), 0, 0, 0, 0], 
+                this.connections.push(new Joint(scene, this, j.toString+","+k.toString(), [i, -edgeRibFirst-thickRib-j*(thickRib+spacRib), 0, 0, 0, 0], 
                     radHole, thickRib, numArcPts));
                 k++;
             }
 
             //extrude & create mesh
             const rib = BABYLON.MeshBuilder.ExtrudePolygon("rib", {shape:profile, holes:holes, depth:thickRib, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-            rib.translate(new BABYLON.Vector3(0, -edgeRib-j*(thickRib+spacRib), 0), 1, BABYLON.Space.WORLD);
+            rib.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib), 0), 1, BABYLON.Space.WORLD);
             meshes.push(rib);
 
                 //rib bounding boxes
@@ -958,7 +965,7 @@ class Trunk extends Component {
                         new BABYLON.Vector3(-radRib+this.BBOffset, 0, radHole+this.BBOffset)
                     ];
                     const aboveBB = BABYLON.MeshBuilder.ExtrudePolygon("aboveBB", {shape:above, depth:thickRib-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-                    aboveBB.translate(new BABYLON.Vector3(0, -edgeRib-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                    aboveBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
                     aboveBB.isVisible = false;
                     this.BB.push(aboveBB);
 
@@ -970,7 +977,7 @@ class Trunk extends Component {
                         new BABYLON.Vector3(-radRib+this.BBOffset, 0, -radHole-this.BBOffset)
                     ];
                     const belowBB = BABYLON.MeshBuilder.ExtrudePolygon("belowBB", {shape:below, depth:thickRib-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-                    belowBB.translate(new BABYLON.Vector3(0, -edgeRib-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                    belowBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
                     belowBB.isVisible = false;
                     this.BB.push(belowBB);
 
@@ -982,7 +989,7 @@ class Trunk extends Component {
                         new BABYLON.Vector3(-radRib+this.BBOffset, 0, -radHole-this.BBOffset)
                     ];
                     const leftBB = BABYLON.MeshBuilder.ExtrudePolygon("leftBB", {shape:left, depth:thickRib-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-                    leftBB.translate(new BABYLON.Vector3(0, -edgeRib-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                    leftBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
                     leftBB.isVisible = false;
                     this.BB.push(leftBB);
 
@@ -995,7 +1002,7 @@ class Trunk extends Component {
                             new BABYLON.Vector3(i+radHole+this.BBOffset, 0, -radHole-this.BBOffset)
                         ];
                         const btwnBB = BABYLON.MeshBuilder.ExtrudePolygon("btwnBB", {shape:btwn, depth:thickRib-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-                        btwnBB.translate(new BABYLON.Vector3(0, -edgeRib-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                        btwnBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
                         btwnBB.isVisible = false;
                         this.BB.push(btwnBB);
                     }
@@ -1008,7 +1015,7 @@ class Trunk extends Component {
                         new BABYLON.Vector3(lenTrunk+radHole+this.BBOffset, 0, -radHole-this.BBOffset)
                     ];
                     const rightBB = BABYLON.MeshBuilder.ExtrudePolygon("rightBB", {shape:right, depth:thickRib-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-                    rightBB.translate(new BABYLON.Vector3(0, -edgeRib-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                    rightBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
                     rightBB.isVisible = false;
                     this.BB.push(rightBB);
         }
@@ -1076,7 +1083,7 @@ class Tree {
                     c.radHole, c.spacHole, c.lenSlot, this.numArcPts));
             } else if (c.type == "trunk") {
                 this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
-                    c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, this.numArcPts));
+                    c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, c.reflected, this.numArcPts));
             }
             if (c.transparent) {
                 this.components[this.components.length-1].xray();
@@ -1189,6 +1196,24 @@ class Tree {
         }
     }
 
+    //reflects specified trunk components
+    reflectTrunks(components) {
+        const oldTrunks = [];
+        for (let i = 0; i < components.length; i++) {
+            const c = components[i];
+            if (c.type = "trunk") {
+                oldTrunks.push(c);
+                var newReflected = 1;
+                if (c.reflected == 1) {
+                    newReflected = 0;
+                }
+                this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
+                    c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, newReflected, this.numArcPts));
+            }
+        }
+        this.delete(oldTrunks);
+    }
+
     //set the specified components materials opaque
     opaque(components) {
         for (let i = 0; i < components.length; i++) {
@@ -1272,6 +1297,12 @@ class Tree {
                             this.toggleTransparency(this.components);
                         break
 
+                        //r key reflects selected trunk components
+                        case "r":
+                        case "R":
+                            this.reflectTrunks(this.selComponents);
+                        break
+
                         //l key loads tree file
                         case "l":
                         case "L":
@@ -1302,7 +1333,7 @@ class Tree {
                 contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenBranch, c.thickBranch, c.radBranch, c.radHole, c.spacHole, c.lenSlot, '\n']);
             } else if (c.type == "trunk") {
                 contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenTrunk, c.widthTile, c.thickTile, c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, 
-                    c.radHole, c.spacHole, c.overhang, '\n']);
+                    c.radHole, c.spacHole, c.overhang, c.reflected, '\n']);
             }
         }
         const file = new Blob(contents, {type: "text/plain;charset=utf-8",});
@@ -1343,7 +1374,7 @@ class Tree {
                         } else if (data[0] == "trunk") {
                             this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, 
                                 [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], 
-                                data[15], data[16], data[17], this.numArcPts));
+                                data[15], data[16], data[17], data[18], this.numArcPts));
                         }
                     }
                 }
@@ -1434,7 +1465,7 @@ const createScene = function () {
     const thickRib = 1; //rib thickness
     const radRib = 1; //outer radius of rib profile
     const spacRib = thickBranch; //clear spacing between ribs
-    const edgeRib = thickBranch; //tile side edge distance before first rib
+    const edgeRib = thickBranch; //tile side edge distance before first rib (if not reflected)
     const overhang = 1; //tile end edge distance overhanging rib end
 
     const snapDist = 1; //snap distance for gizmo controls
@@ -1449,7 +1480,7 @@ const createScene = function () {
     tree.add(new Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts));
     tree.add(new Branch(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts));
     tree.add(new Trunk(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, 
-        radHole, spacHole, overhang, numArcPts));
+        radHole, spacHole, overhang, 0, numArcPts));
     */
     tree.load();
 
