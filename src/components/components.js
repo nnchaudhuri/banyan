@@ -1209,6 +1209,12 @@ class Tree {
                 }
                 this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
                     c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, newReflected, this.numArcPts));
+                if (c.transparent) {
+                    this.components[this.components.length-1].xray();
+                }
+                if (c.showingConnections) {
+                    this.components[this.components.length-1].showConnections();
+                }
             }
         }
         this.delete(oldTrunks);
