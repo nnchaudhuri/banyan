@@ -1,15 +1,13 @@
 FUNCTIONAL - NEED:
-highlight components in collision with one another
-enable reflecting ribs along x axis (= rotating 180 degrees on y (vertical) axis)
 library of components to drag into play space
 check stability of tree
 structural analysis of tree
 figure out snapping of components at angles (maybe diff snapping distance for stems?)
 	
 
-
 FUNCTIONAL - WANT:
 make copied components visibly selected after copying (currently hidden behind duplicate mesh)
+undo & redo features
 create connect connections feature with clicking on connections
 make gizmo attachable to either end of component
 create parent nodes for selecting & moving multiple components
