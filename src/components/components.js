@@ -591,7 +591,7 @@ class Leaf extends Component {
 
 //define stem class (rods for connections or as frames)
 class Stem extends Component {
-    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts) {
+    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], angleBend, lenStem, radStem, radFill, radConn, lenConn, reflected, numArcPts, numFillPts) {
         super(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
@@ -602,6 +602,7 @@ class Stem extends Component {
         this.radFill = radFill; //fillet radius of stem bend
         this.radConn = radConn; //radius of connection
         this.lenConn = lenConn; //length of connection
+        this.reflected = reflected; //toggle for if stem is reflected along longitudinal axis
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
         this.numFillPts = numFillPts; //# of points defining fillet arc resolution
 
@@ -685,6 +686,9 @@ class Stem extends Component {
         this.parentBB();
 
         //set starting position & rotation
+        if (reflected == 1 && angleBend != 0) {
+            this.mesh.rotate(new BABYLON.Vector3(0, 0, 1), Math.PI, BABYLON.Space.WORLD);
+        }
         this.move(x, y, z);
         this.rotate(ax, ay, az);
 
@@ -874,9 +878,9 @@ class Trunk extends Component {
         this.edgeRib = edgeRib; //tile side edge distance before first rib (if not reflected)
         this.radHole = radHole; //radius of holes
         this.spacHole = spacHole; //center-to-center spacing between holes
+        this.reflected = reflected; //toggle for if trunk is reflected along longitudinal axis
         this.overhang = overhang; //tile end edge distance overhanging rib end
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
-        this.reflected = reflected; //toggle for if trunk is reflected along longitudinal axis
 
         const edgeRibLast = widthTile-edgeRib-numRibs*thickRib-(numRibs-1)*spacRib; //tile side edge distance after last rib (if not reflected)
         var edgeRibFirst = edgeRib;
@@ -1077,7 +1081,7 @@ class Tree {
                 this.add(new Leaf(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenX, c.lenY));
             } else if (c.type == "stem") {
                 this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, c.radFill, 
-                    c.radConn, c.lenConn, this.numArcPts, this.numFillPts));
+                    c.radConn, c.lenConn, c.reflected, this.numArcPts, this.numFillPts));
             } else if (c.type == "branch") {
                 this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, c.radBranch, 
                     c.radHole, c.spacHole, c.lenSlot, this.numArcPts));
@@ -1196,19 +1200,28 @@ class Tree {
         }
     }
 
-    //reflects specified trunk components
-    reflectTrunks(components) {
-        const oldTrunks = [];
-        for (let i = 0; i < components.length; i++) {
+    //reflects specified components
+    reflect(components) {
+        const old = [];
+        const num = components.length;
+        for (let i = 0; i < num; i++) {
             const c = components[i];
-            if (c.type = "trunk") {
-                oldTrunks.push(c);
+            if (c.type == "stem" || c.type == "trunk") {
+                old.push(c);
                 var newReflected = 1;
                 if (c.reflected == 1) {
                     newReflected = 0;
                 }
-                this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
-                    c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, newReflected, this.numArcPts));
+                
+                if (c.type == "stem") {
+                    this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, c.radFill, 
+                        c.radConn, c.lenConn, newReflected, this.numArcPts, this.numFillPts));
+                } else if (c.type == "trunk") {
+                    this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
+                        c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, newReflected, this.numArcPts));
+                }
+
+                this.components[this.components.length-1].select();
                 if (c.transparent) {
                     this.components[this.components.length-1].xray();
                 }
@@ -1217,7 +1230,7 @@ class Tree {
                 }
             }
         }
-        this.delete(oldTrunks);
+        this.delete(old);
     }
 
     //set the specified components materials opaque
@@ -1306,7 +1319,7 @@ class Tree {
                         //r key reflects selected trunk components
                         case "r":
                         case "R":
-                            this.reflectTrunks(this.selComponents);
+                            this.reflect(this.selComponents);
                         break
 
                         //l key loads tree file
@@ -1334,7 +1347,7 @@ class Tree {
             if (c.type == "leaf") {
                 contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenX, c.lenY, '\n']);
             } else if (c.type == "stem") {
-                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.angleBend, c.lenStem, c.radStem, c.radFill, c.radConn, c.lenConn, '\n']);
+                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.angleBend, c.lenStem, c.radStem, c.radFill, c.radConn, c.lenConn, c.reflected, '\n']);
             } else if (c.type == "branch") {
                 contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenBranch, c.thickBranch, c.radBranch, c.radHole, c.spacHole, c.lenSlot, '\n']);
             } else if (c.type == "trunk") {
@@ -1373,7 +1386,8 @@ class Tree {
                                 [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8]));
                         } else if (data[0] == "stem") {
                             this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, 
-                                [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], this.numArcPts, this.numFillPts));
+                                [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], 
+                                this.numArcPts, this.numFillPts));
                         } else if (data[0] == "branch") {
                             this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, 
                                 [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], this.numArcPts));
@@ -1483,7 +1497,7 @@ const createScene = function () {
     const tree = new Tree(scene, snapDist, snapRot, numArcPts, numFillPts);
     /*
     tree.add(new Leaf(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenX, lenY));
-    tree.add(new Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, numArcPts, numFillPts));
+    tree.add(new Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, 0, numArcPts, numFillPts));
     tree.add(new Branch(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts));
     tree.add(new Trunk(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, 
         radHole, spacHole, overhang, 0, numArcPts));
