@@ -703,7 +703,7 @@ class Stem extends Component {
 
 //define branch class (frame members with holes & slots)
 class Branch extends Component {
-    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts) {
+    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, reflected, numArcPts) {
         super(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
@@ -714,6 +714,7 @@ class Branch extends Component {
         this.radHole = radHole; //radius of holes
         this.spacHole = spacHole; //center-to-center spacing between holes
         this.lenSlot = lenSlot; //max length of slot hole
+        this.reflected = reflected; //toggle for if branch is reflected along perpendicular axis (ends flipped)
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
 
         //create profile shape
@@ -764,18 +765,28 @@ class Branch extends Component {
                 leftBB.isVisible = false;
                 this.BB.push(leftBB);
 
-            //slot holes, max length
+            //process slot lengths
             let spacRem = lenBranch-2*spacHole;
+            const tempLengths = [];
+            while (spacRem > lenSlot) {
+                tempLengths.push(lenSlot);
+                spacRem -= (lenSlot+spacHole);
+            }
+            tempLengths.push(spacRem);
+            var lengths = tempLengths;
+            if (reflected == 1) {
+                lengths = tempLengths.reverse();
+            }
+
+            //slot holes
             let startSlot = spacHole;
-            let k = 0;
-            while (spacRem >= lenSlot) {
-                const slotHole = pillShape(radHole, lenSlot, startSlot, 0, numArcPts);
+            for (let i = 0; i < lengths.length; i++) {
+                const slotHole = pillShape(radHole, lengths[i], startSlot, 0, numArcPts);
                 holes.push(slotHole);
 
                 //create connection
-                this.connections.push(new Slot(scene, this, k.toString(), [startSlot, 0, 0, 0, 0, 0], radHole, lenSlot, thickBranch, numArcPts));
-                k++;
-
+                this.connections.push(new Slot(scene, this, i.toString(), [startSlot, 0, 0, 0, 0, 0], radHole, lengths[i], thickBranch, numArcPts));
+                
                 //between holes bounding box
                 const btwn = [
                     new BABYLON.Vector3(startSlot-spacHole+radHole+this.BBOffset, 0, radHole+this.BBOffset),
@@ -788,27 +799,8 @@ class Branch extends Component {
                 btwnBB.isVisible = false;
                 this.BB.push(btwnBB);
 
-                spacRem -= (lenSlot+spacHole);
-                startSlot += lenSlot+spacHole;
+                startSlot += lengths[i]+spacHole;
             }
-
-            //slot holes, shorter
-            const slotHole = pillShape(radHole, spacRem, startSlot, 0, numArcPts);
-            holes.push(slotHole);
-                //create connection
-                this.connections.push(new Slot(scene, this, k.toString(), [startSlot, 0, 0, 0, 0, 0], radHole, spacRem, thickBranch, numArcPts));
-
-                //left of final slot bounding box
-                const finSlotL = [
-                    new BABYLON.Vector3(startSlot-spacHole+radHole+this.BBOffset, 0, radHole+this.BBOffset),
-                    new BABYLON.Vector3(startSlot-radHole-this.BBOffset, 0, radHole+this.BBOffset),
-                    new BABYLON.Vector3(startSlot-radHole-this.BBOffset, 0, -radHole-this.BBOffset),
-                    new BABYLON.Vector3(startSlot-spacHole+radHole+this.BBOffset, 0, -radHole-this.BBOffset)
-                ];
-                const finSlotLBB = BABYLON.MeshBuilder.ExtrudePolygon("finSlotLBB", {shape:finSlotL, depth:thickBranch-2*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-                finSlotLBB.translate(new BABYLON.Vector3(0, -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
-                finSlotLBB.isVisible = false;
-                this.BB.push(finSlotLBB);
 
                 //right of final slot bounding box
                 const finSlotR = [
@@ -1084,7 +1076,7 @@ class Tree {
                     c.radConn, c.lenConn, c.reflected, this.numArcPts, this.numFillPts));
             } else if (c.type == "branch") {
                 this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, c.radBranch, 
-                    c.radHole, c.spacHole, c.lenSlot, this.numArcPts));
+                    c.radHole, c.spacHole, c.lenSlot, c.reflected, this.numArcPts));
             } else if (c.type == "trunk") {
                 this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
                     c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, c.reflected, this.numArcPts));
@@ -1206,7 +1198,7 @@ class Tree {
         const num = components.length;
         for (let i = 0; i < num; i++) {
             const c = components[i];
-            if (c.type == "stem" || c.type == "trunk") {
+            if (c.type == "stem" || c.type == "branch" || c.type == "trunk") {
                 old.push(c);
                 var newReflected = 1;
                 if (c.reflected == 1) {
@@ -1216,6 +1208,9 @@ class Tree {
                 if (c.type == "stem") {
                     this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, c.radFill, 
                         c.radConn, c.lenConn, newReflected, this.numArcPts, this.numFillPts));
+                } else if (c.type == "branch") {
+                    this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, c.radBranch, 
+                        c.radHole, c.spacHole, c.lenSlot, newReflected, this.numArcPts));
                 } else if (c.type == "trunk") {
                     this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
                         c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, newReflected, this.numArcPts));
@@ -1349,7 +1344,7 @@ class Tree {
             } else if (c.type == "stem") {
                 contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.angleBend, c.lenStem, c.radStem, c.radFill, c.radConn, c.lenConn, c.reflected, '\n']);
             } else if (c.type == "branch") {
-                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenBranch, c.thickBranch, c.radBranch, c.radHole, c.spacHole, c.lenSlot, '\n']);
+                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenBranch, c.thickBranch, c.radBranch, c.radHole, c.spacHole, c.lenSlot, c.reflected, '\n']);
             } else if (c.type == "trunk") {
                 contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenTrunk, c.widthTile, c.thickTile, c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, 
                     c.radHole, c.spacHole, c.overhang, c.reflected, '\n']);
@@ -1390,7 +1385,7 @@ class Tree {
                                 this.numArcPts, this.numFillPts));
                         } else if (data[0] == "branch") {
                             this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, 
-                                [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], this.numArcPts));
+                                [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], this.numArcPts));
                         } else if (data[0] == "trunk") {
                             this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, 
                                 [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], 
@@ -1498,7 +1493,7 @@ const createScene = function () {
     /*
     tree.add(new Leaf(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenX, lenY));
     tree.add(new Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, 0, numArcPts, numFillPts));
-    tree.add(new Branch(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, numArcPts));
+    tree.add(new Branch(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, 0, numArcPts));
     tree.add(new Trunk(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, 
         radHole, spacHole, overhang, 0, numArcPts));
     */
