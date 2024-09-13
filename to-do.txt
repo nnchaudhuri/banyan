@@ -2,6 +2,7 @@ FUNCTIONAL - NEED:
 library of components to drag into play space
 check stability of tree
 structural analysis of tree
+	create structural diagram version of tree
 figure out snapping of components at angles (maybe diff snapping distance for stems?)
 	
 
@@ -18,8 +19,10 @@ make arrow keys for movement rotate 90 deg
 add checks for file loading to ensure parameters acceptable
 make file saving window
 implement click drag copy feature
+double sided male stem (and female stem)
 enable all axes rotations
 	use ordered array of rotations stored for each component
+sequenced assembly animation
 
 
 COSMETIC - NEED:
