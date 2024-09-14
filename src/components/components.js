@@ -20,6 +20,106 @@ function pillShape(rad, len, startX, startZ, numArcPts) {
     return pill;
 }
 
+//define element class (base class for structural analysis)
+class Element {
+    constructor(scene, component, ID) {
+        //initialize properties
+        this.scene = scene; //scene hosting element
+        this.component = component; //component the element is a part of
+        this.ID = ID; //element ID
+        this.mesh = null; //initialize null mesh
+
+        //default material
+        this.defMat = new BABYLON.StandardMaterial("defMat", scene);
+        this.defCol = new BABYLON.Color3(1, 1, 1);
+        this.defMat.diffuseColor = this.defCol;
+    }
+}
+
+//define node class (for structural analysis)
+class Node extends Element {
+    constructor(scene, component, ID, [x, y, z]) {
+        super(scene, component, ID);
+        
+        //initialize properties
+        this.x = x; //node x coordinate
+        this.y = y; //node y coordinate
+        this.z = z; //node z coordinate
+
+        //create mesh
+        this.mesh = BABYLON.MeshBuilder.CreateSphere("node", {diameter:0.5, segments:component.tree.numArcPts});
+        this.mesh.position = new Vector3(x, y, z);
+    }
+
+    //TO-DO ensure coordinates are updated when component is moved
+}
+
+//define frame element class (for structural analysis)
+class Frame extends Element {
+    constructor(scene, component, ID, nodeI, nodeJ, A, E, Iy, Iz) {
+        super(scene, component, ID);
+        
+        //initialize properties
+        this.nodeI = nodeI; //frame node I
+        this.nodeJ = nodeJ; //frame node J
+        this.L = Math.sqrt(Math.pow(nodeJ.x-nodeI.x, 2)+Math.pow(nodeJ.y-nodeI.y, 2)+Math.pow(nodeJ.z-nodeI.z, 2)); //frame length
+        this.A = A; //frame sectional area
+        this.E = E; //frame young's modulus
+        this.Iy = Iy; //frame moment of inertia over local y-axis
+        this.Iz = Iz; //frame moment of inertia over local z-axis
+
+        //create mesh
+        const path = [new BABYLON.Vector3(nodeI.x, nodeI.y, nodeI.z), new BABYLON.Vector3(nodeJ.x, nodeJ.y, nodeJ.z)];
+        this.mesh = BABYLON.MeshBuilder.CreateTube("frame", {path:path, radius:0.125, tessellation:component.tree.numArcPts, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+    }
+
+    //TO-DO construct local & global stiffness matrices
+}
+
+//MAYBE define link element class (for structural analysis) extends frame class
+
+//define area element class (for structural analysis)
+class Area extends Element {
+    constructor(scene, component, ID, nodeI, nodeJ, nodeK, nodeL) {
+        super(scene, component, ID);
+        
+        //initialize properties
+        this.nodeI = nodeI; //area node I
+        this.nodeJ = nodeJ; //area node J
+        this.nodeK = nodeK; //area node K
+        this.nodeL = nodeL; //area node L
+
+        //create mesh
+        const rect = [
+            new BABYLON.Vector3(nodeI.x, nodeI.y, nodeI.z),
+            new BABYLON.Vector3(nodeJ.x, nodeJ.y, nodeJ.z),
+            new BABYLON.Vector3(nodeK.x, nodeK.y, nodeK.z),
+            new BABYLON.Vector3(nodeL.x, nodeL.y, nodeL.z)
+        ];
+        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("area", {shape:rect, depth:0.05, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        this.mesh.addRotation(Math.PI/2, 0, 0);
+    }
+
+    //TO-DO construct local & global stiffness matrices
+}
+
+//define structural analysis class
+class Analysis {
+    constructor(tree) {
+        //initialize properties
+        this.tree = tree; //tree this analysis is for
+        this.nodes = []; //initialize empty array of nodes
+        this.frames = []; //initialize empty array of frames
+        this.areas = []; //initialize empty array of areas
+    }
+
+    //TO-DO process nodes, removing overlapping nodes
+    //TO-DO check stability
+    //TO-DO construct stiffness matrix
+    //TO-DO solve stiffness equation
+    //TO-DO display forces & deformed shape
+}
+
 //define connection class
 class Connection {
     constructor(scene, component, ID, [x, y, z, ax, ay, az]) {
@@ -234,6 +334,7 @@ class Component {
         this.az = 0; //z rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
         this.type = null; //initialize null component type
         this.mesh = null; //initialize null mesh
+        this.elements = []; //initialize empty structural elements array
         this.connections = []; //initialize empty connections array
         this.showingConnections = false; //toggle for if connections are visible
         this.BB = []; //initialize empty bounding boxes array (for mesh intersection detection)
@@ -421,6 +522,13 @@ class Component {
             this.BB[i].parent = this.mesh;
         }
     }
+
+    //set the component mesh as the parent of the structural element meshes
+    parentElements() {
+        for (let i = 0; i < this.elements.length; i++) {
+            this.elements[i].mesh.parent = this.mesh;
+        }
+    }
         
     //check for mesh intersection between this & another component based on bounding boxes
     intersects(component) {
@@ -573,9 +681,10 @@ class Leaf extends Component {
         leafBB.isVisible = false;
         this.BB.push(leafBB);
         
-        //set parent for connections & BB
+        //set parents
         this.parentConnections();
         this.parentBB();
+        this.parentElements();
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -681,9 +790,10 @@ class Stem extends Component {
         this.connections.push(new Joint(scene, this, "male", [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), 
             -angleBend, 0, -90], radStem+offset, lenConn+offset, numArcPts));
         
-        //set parent for connections & BB
+        //set parents
         this.parentConnections();
         this.parentBB();
+        this.parentElements();
 
         //set starting position & rotation
         if (reflected == 1 && angleBend != 0) {
@@ -836,9 +946,10 @@ class Branch extends Component {
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("branch", {shape:profile, holes:holes, depth:thickBranch, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
-        //set parent for connections & BB
+        //set parents
         this.parentConnections();
         this.parentBB();
+        this.parentElements();
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -1020,9 +1131,10 @@ class Trunk extends Component {
         this.mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true, undefined, false, false);
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
-        //set parent for connections & BB
+        //set parents
         this.parentConnections();
         this.parentBB();
+        this.parentElements();
 
         //set starting position & rotation
         this.move(x, y, z);
