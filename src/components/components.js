@@ -33,6 +33,50 @@ class Element {
         this.defMat = new BABYLON.StandardMaterial("defMat", scene);
         this.defCol = new BABYLON.Color3(1, 1, 1);
         this.defMat.diffuseColor = this.defCol;
+
+        //selected material
+        this.selMat = new BABYLON.StandardMaterial("selMat", scene);
+        this.selCol = new BABYLON.Color3(0, 1, 0);
+        this.selMat.diffuseColor = this.selCol;
+
+        //intersected material
+        this.intMat = new BABYLON.StandardMaterial("intMat", scene);
+        this.intCol = new BABYLON.Color3(1, 0, 0);
+        this.intMat.diffuseColor = this.intCol;
+    }
+
+    //show element
+    show() {
+        this.mesh.isVisible = true;
+    }
+
+    //hide element
+    hide() {
+        this.mesh.isVisible = false;
+    }
+
+    //toggle element visibility
+    toggle() {
+        this.mesh.isVisible = !this.mesh.isVisible;
+    }
+
+    //delete element
+    delete() {
+        this.mesh.dispose();
+    }
+
+    //set up element visuals
+    setupVisuals() {
+        //default visibility
+        this.hide();
+        
+        //initialize mesh material
+        this.mesh.material = this.defMat;
+    }
+
+    //set up element controls & responses
+    setupControls() {
+    
     }
 }
 
@@ -48,7 +92,14 @@ class Node extends Element {
 
         //create mesh
         this.mesh = BABYLON.MeshBuilder.CreateSphere("node", {diameter:0.5, segments:component.tree.numArcPts});
-        this.mesh.position = new Vector3(x, y, z);
+        this.mesh.position.x += x;
+        this.mesh.position.y += y;
+        this.mesh.position.z += z;
+
+        //set up visuals & controls
+        this.setupVisuals();
+        this.mesh.actionManager = new BABYLON.ActionManager(scene);
+        this.setupControls();
     }
 
     //TO-DO ensure coordinates are updated when component is moved
@@ -71,6 +122,11 @@ class Frame extends Element {
         //create mesh
         const path = [new BABYLON.Vector3(nodeI.x, nodeI.y, nodeI.z), new BABYLON.Vector3(nodeJ.x, nodeJ.y, nodeJ.z)];
         this.mesh = BABYLON.MeshBuilder.CreateTube("frame", {path:path, radius:0.125, tessellation:component.tree.numArcPts, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+
+        //set up visuals & controls
+        this.setupVisuals();
+        this.mesh.actionManager = new BABYLON.ActionManager(scene);
+        this.setupControls();
     }
 
     //TO-DO construct local & global stiffness matrices
@@ -98,6 +154,11 @@ class Area extends Element {
         ];
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("area", {shape:rect, depth:0.05, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(Math.PI/2, 0, 0);
+
+        //set up visuals & controls
+        this.setupVisuals();
+        this.mesh.actionManager = new BABYLON.ActionManager(scene);
+        this.setupControls();
     }
 
     //TO-DO construct local & global stiffness matrices
@@ -509,6 +570,14 @@ class Component {
         }
     }
 
+    //toggle component structural elements visibility
+    toggleElements() {
+        for (let i = 0; i < this.elements.length; i++) {
+            this.elements[i].toggle();
+        }
+        this.toggle();
+    }
+
     //set the component mesh as the parent of the connection meshes
     parentConnections() {
         for (let i = 0; i < this.connections.length; i++) {
@@ -595,12 +664,21 @@ class Component {
     updateVisuals() {
         if (this.intersecting) {
             this.mesh.material = this.intMat;
+            for (let i = 0; i < this.elements.length; i++) {
+                this.elements[i].mesh.material = this.intMat;
+            }
         } else if (this.selected) {
             this.mesh.material = this.selMat;
+            for (let i = 0; i < this.elements.length; i++) {
+                this.elements[i].mesh.material = this.selMat;
+            }
         } else if (this.hovering) {
             this.mesh.material = this.hovMat;
         } else {
             this.mesh.material = this.defMat;
+            for (let i = 0; i < this.elements.length; i++) {
+                this.elements[i].mesh.material = this.defMat;
+            }
         }
     }
 
@@ -860,6 +938,10 @@ class Branch extends Component {
             //left circle hole is local origin
             const leftHole = pillShape(radHole, 0, 0, 0, numArcPts);
             holes.push(leftHole);
+                //create node
+                const nodeI = new Node(scene, this, "i", [0, -thickBranch/2, 0]);
+                this.elements.push(nodeI);
+
                 //create connection
                 this.connections.push(new Joint(scene, this, "left", [0, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts));
 
@@ -927,6 +1009,10 @@ class Branch extends Component {
             //right circle hole
             const rightHole = pillShape(radHole, 0, lenBranch, 0, numArcPts);
             holes.push(rightHole);
+                //create node
+                const nodeJ = new Node(scene, this, "j", [lenBranch, -thickBranch/2, 0]);
+                this.elements.push(nodeJ);
+
                 //create connection
                 this.connections.push(new Joint(scene, this, "right", [lenBranch, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts));
 
@@ -945,6 +1031,8 @@ class Branch extends Component {
         //extrude & create mesh
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("branch", {shape:profile, holes:holes, depth:thickBranch, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
+                //create frame
+                this.elements.push(new Frame(scene, this, "frame", nodeI, nodeJ, 1, 1, 1, 1)); //TO-DO update properties
 
         //set parents
         this.parentConnections();
@@ -1288,6 +1376,13 @@ class Tree {
         }
     }
 
+    //toggle specified components structural elements visibility
+    toggleElements(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].toggleElements();
+        }
+    }
+
     //checks for intersections between specified components
     checkIntersections(components) {
         for (let j = 0; j < components.length; j++) {
@@ -1423,7 +1518,13 @@ class Tree {
                             this.toggleTransparency(this.components);
                         break
 
-                        //r key reflects selected trunk components
+                        //q key toggles structural elements visibility for all components
+                        case "q":
+                        case "Q":
+                            this.toggleElements(this.components);
+                        break
+
+                        //r key reflects selected components
                         case "r":
                         case "R":
                             this.reflect(this.selComponents);
