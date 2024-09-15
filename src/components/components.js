@@ -91,7 +91,7 @@ class Node extends Element {
         this.z = z; //node z coordinate
 
         //create mesh
-        this.mesh = BABYLON.MeshBuilder.CreateSphere("node", {diameter:0.5, segments:component.tree.numArcPts});
+        this.mesh = BABYLON.MeshBuilder.CreateSphere("node", {diameter:0.75, segments:component.tree.numArcPts});
         this.mesh.position.x += x;
         this.mesh.position.y += y;
         this.mesh.position.z += z;
@@ -144,16 +144,19 @@ class Area extends Element {
         this.nodeJ = nodeJ; //area node J
         this.nodeK = nodeK; //area node K
         this.nodeL = nodeL; //area node L
+        //TO-DO add structural properties
 
         //create mesh
         const rect = [
-            new BABYLON.Vector3(nodeI.x, nodeI.y, nodeI.z),
-            new BABYLON.Vector3(nodeJ.x, nodeJ.y, nodeJ.z),
-            new BABYLON.Vector3(nodeK.x, nodeK.y, nodeK.z),
-            new BABYLON.Vector3(nodeL.x, nodeL.y, nodeL.z)
+            new BABYLON.Vector3(nodeI.x, 0, nodeI.y),
+            new BABYLON.Vector3(nodeJ.x, 0, nodeJ.y),
+            new BABYLON.Vector3(nodeK.x, 0, nodeK.y),
+            new BABYLON.Vector3(nodeL.x, 0, nodeL.y)
         ];
-        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("area", {shape:rect, depth:0.05, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        const depth = 0.05;
+        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("area", {shape:rect, depth:depth, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(Math.PI/2, 0, 0);
+        this.mesh.position.z += depth/2;
 
         //set up visuals & controls
         this.setupVisuals();
@@ -214,7 +217,7 @@ class Connection {
 
         //selected material
         this.selMat = new BABYLON.StandardMaterial("selMat", scene);
-        this.selCol = new BABYLON.Color3(1, 0, 1);
+        this.selCol = new BABYLON.Color3(0, 1, 0);
         this.selMat.diffuseColor = this.selCol;
         this.selMat.alpha = alpha;
     }
@@ -395,6 +398,7 @@ class Component {
         this.az = 0; //z rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
         this.type = null; //initialize null component type
         this.mesh = null; //initialize null mesh
+        this.structureMode = false; //toggle for if structural elements are showing (structural analysis mode)
         this.elements = []; //initialize empty structural elements array
         this.connections = []; //initialize empty connections array
         this.showingConnections = false; //toggle for if connections are visible
@@ -570,12 +574,31 @@ class Component {
         }
     }
 
+    //show structural elements
+    showElements() {
+        for (let i = 0; i < this.elements.length; i++) {
+            this.elements[i].show();
+        }
+        this.hide();
+        this.structureMode = true;
+    }
+
+    //hide structural elements
+    hideElements() {
+        for (let i = 0; i < this.elements.length; i++) {
+            this.elements[i].hide();
+        }
+        this.show();
+        this.structureMode = false;
+    }
+
     //toggle component structural elements visibility
     toggleElements() {
         for (let i = 0; i < this.elements.length; i++) {
             this.elements[i].toggle();
         }
         this.toggle();
+        this.structureMode = !this.structureMode;
     }
 
     //set the component mesh as the parent of the connection meshes
@@ -740,6 +763,19 @@ class Leaf extends Component {
         this.mesh = BABYLON.MeshBuilder.CreatePlane("leaf", {height:lenY, width:lenX, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
 
+            //create nodes
+            const nodeI = new Node(scene, this, "i", [-lenX/2, lenY/2, 0]);
+            this.elements.push(nodeI);
+            const nodeJ = new Node(scene, this, "j", [lenX/2, lenY/2, 0]);
+            this.elements.push(nodeJ);
+            const nodeK = new Node(scene, this, "k", [lenX/2, -lenY/2, 0]);
+            this.elements.push(nodeK);
+            const nodeL = new Node(scene, this, "l", [-lenX/2, -lenY/2, 0]);
+            this.elements.push(nodeL);
+
+            //create area
+            this.elements.push(new Area(scene, this, "ijkl", nodeI, nodeJ, nodeK, nodeL));
+
         //create connections
         this.connections.push(new Edge(scene, this, "right", [lenX/2, 0, 0, 0, 0, 0], lenY));
         this.connections.push(new Edge(scene, this, "top", [0, lenY/2, 0, 0, 0, 90], lenX));
@@ -802,6 +838,18 @@ class Stem extends Component {
         tubePath.push(new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)));
         var tube = BABYLON.MeshBuilder.CreateTube("tube", {path:tubePath, radius:radStem, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+            
+            //create nodes
+            const nodeI = new Node(scene, this, "i", [0, 0, 0]);
+            this.elements.push(nodeI);
+            const nodeJ = new Node(scene, this, "j", [lenStem/2, 0, 0]);
+            this.elements.push(nodeJ);
+            const nodeK = new Node(scene, this, "k", [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)]);
+            this.elements.push(nodeK);
+
+            //create frames
+            this.elements.push(new Frame(scene, this, "ij", nodeI, nodeJ, 1, 1, 1, 1)); //TO-DO update properties
+            this.elements.push(new Frame(scene, this, "jk", nodeJ, nodeK, 1, 1, 1, 1)); //TO-DO update properties
 
             //bounding boxes
             const rectBB = [
@@ -1032,7 +1080,7 @@ class Branch extends Component {
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("branch", {shape:profile, holes:holes, depth:thickBranch, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
                 //create frame
-                this.elements.push(new Frame(scene, this, "frame", nodeI, nodeJ, 1, 1, 1, 1)); //TO-DO update properties
+                this.elements.push(new Frame(scene, this, "ij", nodeI, nodeJ, 1, 1, 1, 1)); //TO-DO update properties
 
         //set parents
         this.parentConnections();
@@ -1281,6 +1329,9 @@ class Tree {
                 this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
                     c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, c.reflected, this.numArcPts));
             }
+            if (c.structureMode) {
+                this.components[this.components.length-1].showElements();
+            }
             if (c.transparent) {
                 this.components[this.components.length-1].xray();
             }
@@ -1424,6 +1475,9 @@ class Tree {
                 }
 
                 this.components[this.components.length-1].select();
+                if (c.structureMode) {
+                    this.components[this.components.length-1].showElements();
+                }
                 if (c.transparent) {
                     this.components[this.components.length-1].xray();
                 }
@@ -1506,8 +1560,9 @@ class Tree {
                             this.delete(this.selComponents);
                         break
 
-                        //tab key toggles connections visibility for all components
-                        case "Tab":
+                        //n key toggles connections visibility for all components
+                        case "n":
+                        case "N":
                             this.toggleConnections(this.components);
                             this.deselectConnections(this.components);
                         break
