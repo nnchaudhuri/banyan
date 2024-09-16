@@ -219,6 +219,12 @@ class Connection {
         this.selCol = new BABYLON.Color3(0, 1, 0);
         this.selMat.diffuseColor = this.selCol;
         this.selMat.alpha = alpha;
+
+        //connected material
+        this.conMat = new BABYLON.StandardMaterial("conMat", scene);
+        this.conCol = new BABYLON.Color3(1, 0, 1);
+        this.conMat.diffuseColor = this.conCol;
+        this.conMat.alpha = alpha;
     }
 
     //move connection (globally)
@@ -317,11 +323,13 @@ class Connection {
 
     //set up connection controls & responses
     setupControls() {
+        ///*
         //create gizmos
         this.dxGizmo = new BABYLON.AxisDragGizmo(new BABYLON.Vector3(1, 0, 0), this.xCol);
         this.dxGizmo.snapDistance = this.snapDist;
         this.dxGizmo.updateGizmoRotationToMatchAttachedMesh = false;
         this.dxGizmo.attachedMesh = this.mesh;
+        //*/
         
         //hover over connection
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this.mesh, "material", this.defMat));
@@ -379,26 +387,6 @@ class Joint extends Connection {
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
     }
-
-    /*
-    //checks for valid connections from (this) a stem's joint to another component's joints
-    checkStemConnections(component) {
-        if (this.component.type == "stem") {
-            if (this.ID == "femaleStem" || this.ID == "maleStem") {
-                if (component.type == "stem") {
-                    
-                }
-            } else if (this.ID == "femaleBT" || this.ID == "maleBT") {
-                if (component.type == "branch") {
-
-                } else if (component.type == "trunk") {
-    
-                }
-            }
-        }
-        return false;
-    }
-        */
 }
 
 //define slot class (slotted hole connections in branch component) FIX!
@@ -886,7 +874,11 @@ class Stem extends Component {
                 radFill*(1-Math.cos(i*angleBend*Math.PI/180/numFillPts))));
         }
         tubePath.push(new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)));
-        var tube = BABYLON.MeshBuilder.CreateTube("tube", {path:tubePath, radius:radStem, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, 
+        var tubeCap = BABYLON.Mesh.CAP_END;
+        if (reflected == 1) {
+            tubeCap = BABYLON.Mesh.CAP_START;
+        }
+        var tube = BABYLON.MeshBuilder.CreateTube("tube", {path:tubePath, radius:radStem, tessellation:numArcPts, cap:tubeCap, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
             
             //create nodes
@@ -898,8 +890,9 @@ class Stem extends Component {
             this.elements.push(nodeK);
 
             //create frames
-            this.elements.push(new Frame(scene, this, "ij", nodeI, nodeJ, 0.125, 1, 1, 1, 1)); //TO-DO update properties
-            this.elements.push(new Frame(scene, this, "jk", nodeJ, nodeK, 0.125, 1, 1, 1, 1)); //TO-DO update properties
+            const radFrame = 0.125;
+            this.elements.push(new Frame(scene, this, "ij", nodeI, nodeJ, radFrame, 1, 1, 1, 1)); //TO-DO update properties
+            this.elements.push(new Frame(scene, this, "jk", nodeJ, nodeK, radFrame, 1, 1, 1, 1)); //TO-DO update properties
 
             //bounding boxes
             const rectBB = [
@@ -908,11 +901,17 @@ class Stem extends Component {
                 new BABYLON.Vector3(radStem-this.BBOffset/2, 0, radStem-this.BBOffset/2),
                 new BABYLON.Vector3(radStem-this.BBOffset/2, 0, -radStem+this.BBOffset/2)
             ];
+            var preOffset = -1.1*this.BBOffset;
+            var postOffset = this.BBOffset;
+            if (reflected == 1) {
+                preOffset = this.BBOffset;
+                postOffset = -1.1*this.BBOffset;
+            }
 
                 //pre fillet bounding box
-                const preBB = BABYLON.MeshBuilder.ExtrudePolygon("preBB", {shape:rectBB, depth:lenStem/2-1.1*this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                const preBB = BABYLON.MeshBuilder.ExtrudePolygon("preBB", {shape:rectBB, depth:lenStem/2+preOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
                 preBB.addRotation(0, 0, Math.PI/2);
-                preBB.translate(new BABYLON.Vector3(1.1*this.BBOffset, 0, 0), 1, BABYLON.Space.WORLD);
+                preBB.translate(new BABYLON.Vector3(-preOffset, 0, 0), 1, BABYLON.Space.WORLD);
                 preBB.isVisible = false;
                 this.BB.push(preBB);
 
@@ -927,7 +926,7 @@ class Stem extends Component {
                 }
 
                 //post fillet bounding box
-                const postBB = BABYLON.MeshBuilder.ExtrudePolygon("postBB", {shape:rectBB, depth:lenStem/2+this.BBOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+                const postBB = BABYLON.MeshBuilder.ExtrudePolygon("postBB", {shape:rectBB, depth:lenStem/2+postOffset, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
                 postBB.addRotation(0, 0, Math.PI/2);
                 postBB.translate(new BABYLON.Vector3(lenStem/2, 0, 0), 1, BABYLON.Space.WORLD);
                 postBB.addRotation(-angleBend*Math.PI/180, 0, 0);
@@ -935,18 +934,30 @@ class Stem extends Component {
                 this.BB.push(postBB);
 
         //create male mesh
-        const maleConnPath = [
+        var maleConnPath = [
             new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)),
             new BABYLON.Vector3((lenStem/2)+(lenStem/2+lenConn)*(Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180))
         ];
+        if (reflected == 1) {
+            maleConnPath = [
+                new BABYLON.Vector3(0, 0, 0),
+                new BABYLON.Vector3(-lenConn, 0, 0)
+            ];
+        }
         var maleConn = BABYLON.MeshBuilder.CreateTube("maleConn", {path:maleConnPath, radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         //create female mesh
-        const femConnPath = [
+        var femConnPath = [
             new BABYLON.Vector3(0, 0, 0),
             new BABYLON.Vector3(lenConn, 0, 0)
         ];
+        if (reflected == 1) {
+            femConnPath = [
+                new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)),
+                new BABYLON.Vector3((lenStem/2)+(lenStem/2-lenConn)*(Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2-lenConn)*Math.sin(angleBend*Math.PI/180))
+            ];
+        }
         var femConn = BABYLON.MeshBuilder.CreateTube("femConn", {path:femConnPath, radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
@@ -955,6 +966,10 @@ class Stem extends Component {
         const hole = [pillShape(radConn, 0, 0, 0, numArcPts)];
         var cap = BABYLON.MeshBuilder.ExtrudePolygon("cap", {shape:circle, holes:hole, depth:0, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         cap.addRotation(0, 0, Math.PI/2);
+        if (reflected == 1) {
+            cap.translate(new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)), 1, BABYLON.Space.WORLD);
+            cap.addRotation(-angleBend*Math.PI/180, 0, 0);
+        }
 
         //merge meshes
         this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn, femConn, cap], true, true, undefined, false, false);
@@ -962,14 +977,23 @@ class Stem extends Component {
         
         //create stem connections
         const offset = 0.005;
-        this.connections.push(new Joint(scene, this, "femaleStem", [0, 0, 0, 0, 0, -90], radStem+offset, lenConn, numArcPts));
-        this.connections.push(new Joint(scene, this, "maleStem", [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), 
-            -angleBend, 0, -90], radStem+offset, lenConn, numArcPts));
+        var femPos = [0, 0, 0, 0, 0, -90];
+        var malePos = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
+        if (reflected == 1) {
+            femPos = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
+            malePos = [0, 0, 0, 0, 0, 90];
+        }
+        this.connections.push(new Joint(scene, this, "femaleStem", femPos, radStem+offset, lenConn, numArcPts));
+        this.connections.push(new Joint(scene, this, "maleStem", malePos, radStem+offset, lenConn, numArcPts));
 
         //create branch/trunk connections
-        this.connections.push(new Joint(scene, this, "femaleBT", [0, 0, 0, 0, 0, -90], radStem+offset/2, thickBT, numArcPts));
-        this.connections.push(new Joint(scene, this, "maleBT", [(lenStem/2)+(lenStem/2-thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-thickBT)*Math.sin(angleBend*Math.PI/180), 
-            -angleBend, 0, -90], radStem+offset/2, thickBT, numArcPts));
+        malePos = [(lenStem/2)+(lenStem/2-thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-thickBT)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
+        if (reflected == 1) {
+            femPos = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
+            malePos = [thickBT, 0, 0, 0, 0, 90];
+        }
+        this.connections.push(new Joint(scene, this, "femaleBT", femPos, radStem+offset/2, thickBT, numArcPts));
+        this.connections.push(new Joint(scene, this, "maleBT", malePos, radStem+offset/2, thickBT, numArcPts));
         
         //set parents
         this.parentConnections();
@@ -977,9 +1001,6 @@ class Stem extends Component {
         this.parentElements();
 
         //set starting position & rotation
-        if (reflected == 1 && angleBend != 0) {
-            this.mesh.rotate(new BABYLON.Vector3(0, 0, 1), Math.PI, BABYLON.Space.WORLD);
-        }
         this.move(x, y, z);
         this.rotate(ax, ay, az);
 
@@ -1195,7 +1216,7 @@ class Trunk extends Component {
         const edgeRibLast = widthTile-edgeRib-numRibs*thickRib-(numRibs-1)*spacRib; //tile side edge distance after last rib (if not reflected)
         var edgeRibFirst = edgeRib;
         if (reflected == 1) {
-            var edgeRibFirst = edgeRibLast;
+            edgeRibFirst = edgeRibLast;
         }
 
         const meshes = [];
