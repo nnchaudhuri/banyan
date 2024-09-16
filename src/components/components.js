@@ -107,7 +107,7 @@ class Node extends Element {
 
 //define frame element class (for structural analysis)
 class Frame extends Element {
-    constructor(scene, component, ID, nodeI, nodeJ, A, E, Iy, Iz) {
+    constructor(scene, component, ID, nodeI, nodeJ, radMesh, A, E, Iy, Iz) {
         super(scene, component, ID);
         
         //initialize properties
@@ -121,7 +121,7 @@ class Frame extends Element {
 
         //create mesh
         const path = [new BABYLON.Vector3(nodeI.x, nodeI.y, nodeI.z), new BABYLON.Vector3(nodeJ.x, nodeJ.y, nodeJ.z)];
-        this.mesh = BABYLON.MeshBuilder.CreateTube("frame", {path:path, radius:0.125, tessellation:component.tree.numArcPts, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        this.mesh = BABYLON.MeshBuilder.CreateTube("frame", {path:path, radius:radMesh, tessellation:component.tree.numArcPts, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         //set up visuals & controls
         this.setupVisuals();
@@ -136,7 +136,7 @@ class Frame extends Element {
 
 //define area element class (for structural analysis)
 class Area extends Element {
-    constructor(scene, component, ID, nodeI, nodeJ, nodeK, nodeL) {
+    constructor(scene, component, ID, nodeI, nodeJ, nodeK, nodeL, thickMesh) {
         super(scene, component, ID);
         
         //initialize properties
@@ -153,10 +153,9 @@ class Area extends Element {
             new BABYLON.Vector3(nodeK.x, 0, nodeK.y),
             new BABYLON.Vector3(nodeL.x, 0, nodeL.y)
         ];
-        const depth = 0.05;
-        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("area", {shape:rect, depth:depth, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("area", {shape:rect, depth:thickMesh, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(Math.PI/2, 0, 0);
-        this.mesh.position.z += depth/2;
+        this.mesh.position.z += thickMesh/2;
 
         //set up visuals & controls
         this.setupVisuals();
@@ -200,7 +199,7 @@ class Connection {
         this.type = null; //initialize null connection type
         this.mesh = null; //initialize null mesh
         this.selected = false; //toggle for if connection is selected
-        this.used = false; //toggle for if connection is in use
+        this.connectedTo = null; //what this connection is connected to (null if unused)
         const alpha = 0.5; //transparency value
 
         //default material
@@ -270,6 +269,14 @@ class Connection {
 
     //select connection
     select() {
+        //deselect all other connections for this component
+        for (let i = 0; i < this.component.connections.length; i++) {
+            const c = this.component.connections[i];
+            if (this != c) {
+                c.deselect();
+            }
+        }
+        
         //update properties
         this.selected = true;
 
@@ -290,6 +297,15 @@ class Connection {
         this.mesh.material = this.defMat;
     }
 
+    //manage connection selection
+    manageSelection() {
+        if (this.selected) {
+            this.deselect();
+        } else {
+            this.select();
+        }
+    }
+
     //set up connection visuals
     setupVisuals() {
         //default visibility
@@ -301,13 +317,18 @@ class Connection {
 
     //set up connection controls & responses
     setupControls() {
+        //create gizmos
+        this.dxGizmo = new BABYLON.AxisDragGizmo(new BABYLON.Vector3(1, 0, 0), this.xCol);
+        this.dxGizmo.snapDistance = this.snapDist;
+        this.dxGizmo.updateGizmoRotationToMatchAttachedMesh = false;
+        this.dxGizmo.attachedMesh = this.mesh;
+        
         //hover over connection
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this.mesh, "material", this.defMat));
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this.mesh, "material", this.hovMat));
 
         //click (select) connection
-        this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.select()}))
-            .then(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.deselect()}));
+        this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.manageSelection()}));
     }
 }
 
@@ -358,6 +379,26 @@ class Joint extends Connection {
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
     }
+
+    /*
+    //checks for valid connections from (this) a stem's joint to another component's joints
+    checkStemConnections(component) {
+        if (this.component.type == "stem") {
+            if (this.ID == "femaleStem" || this.ID == "maleStem") {
+                if (component.type == "stem") {
+                    
+                }
+            } else if (this.ID == "femaleBT" || this.ID == "maleBT") {
+                if (component.type == "branch") {
+
+                } else if (component.type == "trunk") {
+    
+                }
+            }
+        }
+        return false;
+    }
+        */
 }
 
 //define slot class (slotted hole connections in branch component) FIX!
@@ -541,6 +582,15 @@ class Component {
         //hide gizmos
         this.hideGizmos();
         if (this.tree.selComponents.length < 1) {this.tree.showingGizmos = false};
+    }
+
+    //manage component selection
+    manageSelection() {
+        if (this.selected) {
+            this.deselect();
+        } else {
+            this.select();
+        }
     }
 
     //show component connections
@@ -744,8 +794,7 @@ class Component {
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this, "hovering", true));
 
         //click (select) component
-        this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.select()}))
-            .then(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.deselect()}));
+        this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.manageSelection()}));
     }
 }
 
@@ -774,7 +823,7 @@ class Leaf extends Component {
             this.elements.push(nodeL);
 
             //create area
-            this.elements.push(new Area(scene, this, "ijkl", nodeI, nodeJ, nodeK, nodeL));
+            this.elements.push(new Area(scene, this, "ijkl", nodeI, nodeJ, nodeK, nodeL, 0.05));
 
         //create connections
         this.connections.push(new Edge(scene, this, "right", [lenX/2, 0, 0, 0, 0, 0], lenY));
@@ -814,7 +863,7 @@ class Leaf extends Component {
 
 //define stem class (rods for connections or as frames)
 class Stem extends Component {
-    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], angleBend, lenStem, radStem, radFill, radConn, lenConn, reflected, numArcPts, numFillPts) {
+    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], angleBend, lenStem, radStem, radFill, radConn, lenConn, thickBT, reflected, numArcPts, numFillPts) {
         super(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
@@ -825,6 +874,7 @@ class Stem extends Component {
         this.radFill = radFill; //fillet radius of stem bend
         this.radConn = radConn; //radius of connection
         this.lenConn = lenConn; //length of connection
+        this.thickBT = thickBT; //thickness of branches & trunk ribs in the tree
         this.reflected = reflected; //toggle for if stem is reflected along longitudinal axis
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
         this.numFillPts = numFillPts; //# of points defining fillet arc resolution
@@ -848,8 +898,8 @@ class Stem extends Component {
             this.elements.push(nodeK);
 
             //create frames
-            this.elements.push(new Frame(scene, this, "ij", nodeI, nodeJ, 1, 1, 1, 1)); //TO-DO update properties
-            this.elements.push(new Frame(scene, this, "jk", nodeJ, nodeK, 1, 1, 1, 1)); //TO-DO update properties
+            this.elements.push(new Frame(scene, this, "ij", nodeI, nodeJ, 0.125, 1, 1, 1, 1)); //TO-DO update properties
+            this.elements.push(new Frame(scene, this, "jk", nodeJ, nodeK, 0.125, 1, 1, 1, 1)); //TO-DO update properties
 
             //bounding boxes
             const rectBB = [
@@ -910,11 +960,16 @@ class Stem extends Component {
         this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn, femConn, cap], true, true, undefined, false, false);
         this.mesh.addRotation(-Math.PI/2, Math.PI/2, Math.PI); //rotate to default orientation
         
-        //create connections
+        //create stem connections
         const offset = 0.005;
-        this.connections.push(new Joint(scene, this, "female", [lenConn-offset, 0, 0, 0, 0, 90], radStem+offset, lenConn+offset, numArcPts));
-        this.connections.push(new Joint(scene, this, "male", [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), 
-            -angleBend, 0, -90], radStem+offset, lenConn+offset, numArcPts));
+        this.connections.push(new Joint(scene, this, "femaleStem", [0, 0, 0, 0, 0, -90], radStem+offset, lenConn, numArcPts));
+        this.connections.push(new Joint(scene, this, "maleStem", [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), 
+            -angleBend, 0, -90], radStem+offset, lenConn, numArcPts));
+
+        //create branch/trunk connections
+        this.connections.push(new Joint(scene, this, "femaleBT", [0, 0, 0, 0, 0, -90], radStem+offset/2, thickBT, numArcPts));
+        this.connections.push(new Joint(scene, this, "maleBT", [(lenStem/2)+(lenStem/2-thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-thickBT)*Math.sin(angleBend*Math.PI/180), 
+            -angleBend, 0, -90], radStem+offset/2, thickBT, numArcPts));
         
         //set parents
         this.parentConnections();
@@ -934,6 +989,22 @@ class Stem extends Component {
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
         this.inclGizmos = [true, true, true, true, false, false]; //array of which gizmos to include [dx, dy, dz, rx, ry, rz]
+    }
+
+    //checks for valid connections from this stem's joints to another component's joints
+    checkConnections(component) {
+        for (let i = 0; i < this.connections.length; i++) {
+            const c = this.connections[i];
+            if (c.ID == "femaleStem") { //i = 0
+                //if (component.type == "stem" && )
+            } else if (c.ID == "maleStem") { //i = 1
+
+            } else if (c.ID == "femaleBT") { //i = 2
+
+            } else if (c.ID == "maleBT") { //i = 3
+
+            }
+        }
     }
 }
 
@@ -1080,7 +1151,7 @@ class Branch extends Component {
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("branch", {shape:profile, holes:holes, depth:thickBranch, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
                 //create frame
-                this.elements.push(new Frame(scene, this, "ij", nodeI, nodeJ, 1, 1, 1, 1)); //TO-DO update properties
+                this.elements.push(new Frame(scene, this, "ij", nodeI, nodeJ, 0.25, 1, 1, 1, 1)); //TO-DO update properties
 
         //set parents
         this.parentConnections();
@@ -1321,7 +1392,7 @@ class Tree {
                 this.add(new Leaf(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenX, c.lenY));
             } else if (c.type == "stem") {
                 this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, c.radFill, 
-                    c.radConn, c.lenConn, c.reflected, this.numArcPts, this.numFillPts));
+                    c.radConn, c.lenConn, c.thickBT, c.reflected, this.numArcPts, this.numFillPts));
             } else if (c.type == "branch") {
                 this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, c.radBranch, 
                     c.radHole, c.spacHole, c.lenSlot, c.reflected, this.numArcPts));
@@ -1465,7 +1536,7 @@ class Tree {
                 
                 if (c.type == "stem") {
                     this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, c.radFill, 
-                        c.radConn, c.lenConn, newReflected, this.numArcPts, this.numFillPts));
+                        c.radConn, c.lenConn, c.thickBT, newReflected, this.numArcPts, this.numFillPts));
                 } else if (c.type == "branch") {
                     this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, c.radBranch, 
                         c.radHole, c.spacHole, c.lenSlot, newReflected, this.numArcPts));
@@ -1610,7 +1681,7 @@ class Tree {
             if (c.type == "leaf") {
                 contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenX, c.lenY, '\n']);
             } else if (c.type == "stem") {
-                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.angleBend, c.lenStem, c.radStem, c.radFill, c.radConn, c.lenConn, c.reflected, '\n']);
+                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.angleBend, c.lenStem, c.radStem, c.radFill, c.radConn, c.lenConn, c.thickBT, c.reflected, '\n']);
             } else if (c.type == "branch") {
                 contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenBranch, c.thickBranch, c.radBranch, c.radHole, c.spacHole, c.lenSlot, c.reflected, '\n']);
             } else if (c.type == "trunk") {
@@ -1649,7 +1720,7 @@ class Tree {
                                 [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8]));
                         } else if (data[0] == "stem") {
                             this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, 
-                                [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], 
+                                [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14],
                                 this.numArcPts, this.numFillPts));
                         } else if (data[0] == "branch") {
                             this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, 
@@ -1745,7 +1816,7 @@ const createScene = function () {
     const widthTile = 4; //tile width
     const thickTile = 1; //tile thickness
     const numRibs = 2; //# of ribs
-    const thickRib = 1; //rib thickness
+    const thickRib = thickBranch; //rib thickness
     const radRib = 1; //outer radius of rib profile
     const spacRib = thickBranch; //clear spacing between ribs
     const edgeRib = thickBranch; //tile side edge distance before first rib (if not reflected)
@@ -1760,7 +1831,7 @@ const createScene = function () {
     const tree = new Tree(scene, snapDist, snapRot, numArcPts, numFillPts);
     /*
     tree.add(new Leaf(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenX, lenY));
-    tree.add(new Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, 0, numArcPts, numFillPts));
+    tree.add(new Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, thickBranch, 0, numArcPts, numFillPts));
     tree.add(new Branch(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, 0, numArcPts));
     tree.add(new Trunk(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, 
         radHole, spacHole, overhang, 0, numArcPts));
