@@ -901,11 +901,11 @@ class Stem extends Component {
                 new BABYLON.Vector3(radStem-this.BBOffset/2, 0, radStem-this.BBOffset/2),
                 new BABYLON.Vector3(radStem-this.BBOffset/2, 0, -radStem+this.BBOffset/2)
             ];
-            var preOffset = -1.1*this.BBOffset;
+            var preOffset = -1.5*this.BBOffset;
             var postOffset = this.BBOffset;
             if (reflected == 1) {
                 preOffset = this.BBOffset;
-                postOffset = -1.1*this.BBOffset;
+                postOffset = -1.5*this.BBOffset;
             }
 
                 //pre fillet bounding box
@@ -1016,13 +1016,15 @@ class Stem extends Component {
     checkConnections(component) {
         for (let i = 0; i < this.connections.length; i++) {
             const c = this.connections[i];
-            if (c.ID == "femaleStem") { //i = 0
-                //if (component.type == "stem" && )
-            } else if (c.ID == "maleStem") { //i = 1
+            if (component.type == "stem") {
+                if (c.ID == "femaleStem") { //i = 0
+            
+                } else if (c.ID == "maleStem") { //i = 1
+    
+                }
+            } else if (component.type == "branch") {
 
-            } else if (c.ID == "femaleBT") { //i = 2
-
-            } else if (c.ID == "maleBT") { //i = 3
+            } else if (component.type == "trunk") {
 
             }
         }
