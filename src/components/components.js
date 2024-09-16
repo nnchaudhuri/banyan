@@ -86,6 +86,7 @@ class Node extends Element {
         super(scene, component, ID);
         
         //initialize properties
+        //TO-DO update coordinates when components moved or just use mesh position
         this.x = x; //node x coordinate
         this.y = y; //node y coordinate
         this.z = z; //node z coordinate
@@ -190,14 +191,17 @@ class Connection {
         this.scene = scene; //scene hosting connection
         this.component = component; //component the connection is a part of
         this.ID = ID; //connection ID
+        /*TO-DO update coordinates when components moved or just use mesh position
         this.x = 0; //x position (of local origin), initialize to 0 as specific connections set starting position & rotation
         this.y = 0; //y position (of local origin), initialize to 0 as specific connections set starting position & rotation
         this.z = 0; //z position (of local origin), initialize to 0 as specific connections set starting position & rotation
         this.ax = 0; //x rotation (in degrees, about local origin), initialize to 0 as specific connections set starting position & rotation
         this.ay = 0; //y rotation (in degrees, about local origin), initialize to 0 as specific connections set starting position & rotation
         this.az = 0; //z rotation (in degrees, about local origin), initialize to 0 as specific connections set starting position & rotation
+        */
         this.type = null; //initialize null connection type
         this.mesh = null; //initialize null mesh
+        this.hovering = false; //toggle for if connection is being hovered over
         this.selected = false; //toggle for if connection is selected
         this.connectedTo = null; //what this connection is connected to (null if unused)
         const alpha = 0.5; //transparency value
@@ -230,9 +234,11 @@ class Connection {
     //move connection (globally)
     move(dx, dy, dz) {
         //update position properties
+        /*TO-DO update coordinates when components moved or just use mesh position
         this.x += dx;
         this.y += dy;
         this.z += dz;
+        */
 
         //move mesh
         this.mesh.position.x += dx;
@@ -321,6 +327,19 @@ class Connection {
         this.mesh.material = this.defMat;
     }
 
+    //updates connection visuals
+    updateVisuals() {
+        if (this.connectedTo != null) {
+            this.mesh.material = this.conMat;
+        } else if (this.selected) {
+            this.mesh.material = this.selMat;
+        } else if (this.hovering) {
+            this.mesh.material = this.hovMat;
+        } else {
+            this.mesh.material = this.defMat;
+        }
+    }
+
     //set up connection controls & responses
     setupControls() {
         ///*
@@ -332,8 +351,8 @@ class Connection {
         //*/
         
         //hover over connection
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this.mesh, "material", this.defMat));
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this.mesh, "material", this.hovMat));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this, "hovering", false));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this, "hovering", true));
 
         //click (select) connection
         this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.manageSelection()}));
@@ -741,6 +760,10 @@ class Component {
                 this.elements[i].mesh.material = this.defMat;
             }
         }
+
+        for (let i = 0; i < this.connections.length; i++) {
+            this.connections[i].updateVisuals();
+        }
     }
 
     //set up component controls & responses
@@ -983,7 +1006,7 @@ class Stem extends Component {
             femPos = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
             malePos = [0, 0, 0, 0, 0, 90];
         }
-        this.connections.push(new Joint(scene, this, "femaleStem", femPos, radStem+offset, lenConn, numArcPts));
+        this.connections.push(new Joint(scene, this, "femStem", femPos, radStem+offset, lenConn, numArcPts));
         this.connections.push(new Joint(scene, this, "maleStem", malePos, radStem+offset, lenConn, numArcPts));
 
         //create branch/trunk connections
@@ -992,7 +1015,7 @@ class Stem extends Component {
             femPos = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
             malePos = [thickBT, 0, 0, 0, 0, 90];
         }
-        this.connections.push(new Joint(scene, this, "femaleBT", femPos, radStem+offset/2, thickBT, numArcPts));
+        this.connections.push(new Joint(scene, this, "femBT", femPos, radStem+offset/2, thickBT, numArcPts));
         this.connections.push(new Joint(scene, this, "maleBT", malePos, radStem+offset/2, thickBT, numArcPts));
         
         //set parents
@@ -1017,16 +1040,19 @@ class Stem extends Component {
         for (let i = 0; i < this.connections.length; i++) {
             const c = this.connections[i];
             if (component.type == "stem") {
-                if (c.ID == "femaleStem") { //i = 0
-            
-                } else if (c.ID == "maleStem") { //i = 1
-    
+                if (c.ID == "femStem" && c.mesh.position == component.connections[1].mesh.position) { //[1] --> maleStem
+                    c.connectedTo = component.connections[1];
+                    break;
+                } else if (c.ID == "maleStem" && c.mesh.position == component.connections[0].mesh.position) { //[0] --> femStem 
+                    c.connectedTo = component.connections[0];
+                    break;
                 }
             } else if (component.type == "branch") {
 
             } else if (component.type == "trunk") {
 
             }
+            c.connectedTo = null;
         }
     }
 }
@@ -1544,6 +1570,19 @@ class Tree {
         }
     }
 
+    //checks for connections between specified components
+    checkConnections(components) {
+        for (let j = 0; j < components.length; j++) {
+            for (let i = 0; i < components.length; i++) {
+                if (i != j) {
+                    if (components[i].type == "stem") {
+                        components[i].checkConnections(components[j]);
+                    }
+                }
+            }
+        }
+    }
+
     //reflects specified components
     reflect(components) {
         const old = [];
@@ -1864,6 +1903,7 @@ const createScene = function () {
     //component render updates
     scene.registerBeforeRender(function() {
         tree.checkIntersections(tree.components);
+        tree.checkConnections(tree.components);
         tree.updateVisuals(tree.components);
     });
 
