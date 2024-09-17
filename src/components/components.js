@@ -329,13 +329,13 @@ class Connection {
 
     //updates connection visuals
     updateVisuals() {
-        if (this.connectedTo != null) {
-            this.mesh.material = this.conMat;
-        } else if (this.selected) {
+        if (this.selected) {
             this.mesh.material = this.selMat;
         } else if (this.hovering) {
             this.mesh.material = this.hovMat;
-        } else {
+        } else if (this.connectedTo != null) {
+            this.mesh.material = this.conMat;
+        }  else {
             this.mesh.material = this.defMat;
         }
     }
@@ -742,18 +742,18 @@ class Component {
 
     //updates component visuals
     updateVisuals() {
-        if (this.intersecting) {
-            this.mesh.material = this.intMat;
-            for (let i = 0; i < this.elements.length; i++) {
-                this.elements[i].mesh.material = this.intMat;
-            }
-        } else if (this.selected) {
+        if (this.selected) {
             this.mesh.material = this.selMat;
             for (let i = 0; i < this.elements.length; i++) {
                 this.elements[i].mesh.material = this.selMat;
             }
         } else if (this.hovering) {
             this.mesh.material = this.hovMat;
+        } else if (this.intersecting) {
+            this.mesh.material = this.intMat;
+            for (let i = 0; i < this.elements.length; i++) {
+                this.elements[i].mesh.material = this.intMat;
+            }
         } else {
             this.mesh.material = this.defMat;
             for (let i = 0; i < this.elements.length; i++) {
@@ -869,6 +869,27 @@ class Leaf extends Component {
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
         this.inclGizmos = [true, true, true, false, false, true]; //array of which gizmos to include [dx, dy, dz, rx, ry, rz]
+    }
+
+    //checks for valid connections from this leaf's edges to other leafs edges
+    checkConnections(components) {
+        for (let j = 0; j < this.connections.length; j++) {
+            const conn = this.connections[j];
+            conn.connectedTo = null;
+            for (let i = 0; i < components.length; i++) {
+                const comp = components[i];
+                if (this.ID != comp.ID) {
+                    if (comp.type == "leaf") {
+                        for (let c = 0; c < comp.connections.length; c++) {
+                            if (conn.mesh.position.equals(comp.connections[c].mesh.position)) {
+                                conn.connectedTo = comp.connections[c];
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1035,24 +1056,33 @@ class Stem extends Component {
         this.inclGizmos = [true, true, true, true, false, false]; //array of which gizmos to include [dx, dy, dz, rx, ry, rz]
     }
 
-    //checks for valid connections from this stem's joints to another component's joints
-    checkConnections(component) {
-        for (let i = 0; i < this.connections.length; i++) {
-            const c = this.connections[i];
-            if (component.type == "stem") {
-                if (c.ID == "femStem" && c.mesh.position == component.connections[1].mesh.position) { //[1] --> maleStem
-                    c.connectedTo = component.connections[1];
-                    break;
-                } else if (c.ID == "maleStem" && c.mesh.position == component.connections[0].mesh.position) { //[0] --> femStem 
-                    c.connectedTo = component.connections[0];
-                    break;
+    //checks for valid connections from this stem's joints to other components joints
+    checkConnections(components) {
+        for (let j = 0; j < this.connections.length; j++) {
+            const conn = this.connections[j];
+            conn.connectedTo = null;
+            for (let i = 0; i < components.length; i++) {
+                const comp = components[i];
+                if (this.ID != comp.ID) {
+                    if (comp.type == "stem") {
+                        if (conn.ID == "femStem" && conn.mesh.position.equalsWithEpsilon(comp.connections[1].mesh.position)) { //[1] --> maleStem
+                        //if (conn.ID == "femStem") { //[1] --> maleStem
+                            conn.connectedTo = comp.connections[1];
+                            break;
+                        } else if (conn.ID == "maleStem" && conn.mesh.position.equalsWithEpsilon(comp.connections[0].mesh.position)) { //[0] --> femStem 
+                        //} else if (conn.ID == "maleStem") { //[0] --> femStem 
+                            conn.connectedTo = comp.connections[0];
+                            break;
+                        } else {
+                            //
+                        }
+                    } else if (comp.type == "branch") {
+        
+                    } else if (comp.type == "trunk") {
+        
+                    }
                 }
-            } else if (component.type == "branch") {
-
-            } else if (component.type == "trunk") {
-
             }
-            c.connectedTo = null;
         }
     }
 }
@@ -1572,13 +1602,9 @@ class Tree {
 
     //checks for connections between specified components
     checkConnections(components) {
-        for (let j = 0; j < components.length; j++) {
-            for (let i = 0; i < components.length; i++) {
-                if (i != j) {
-                    if (components[i].type == "stem") {
-                        components[i].checkConnections(components[j]);
-                    }
-                }
+        for (let i = 0; i < components.length; i++) {
+            if (components[i].type == "leaf") {
+                components[i].checkConnections(components);
             }
         }
     }
