@@ -86,7 +86,6 @@ class Node extends Element {
         super(scene, component, ID);
         
         //initialize properties
-        //TO-DO update coordinates when components moved or just use mesh position
         this.x = x; //node x coordinate
         this.y = y; //node y coordinate
         this.z = z; //node z coordinate
@@ -191,14 +190,12 @@ class Connection {
         this.scene = scene; //scene hosting connection
         this.component = component; //component the connection is a part of
         this.ID = ID; //connection ID
-        /*TO-DO update coordinates when components moved or just use mesh position
         this.x = 0; //x position (of local origin), initialize to 0 as specific connections set starting position & rotation
         this.y = 0; //y position (of local origin), initialize to 0 as specific connections set starting position & rotation
         this.z = 0; //z position (of local origin), initialize to 0 as specific connections set starting position & rotation
         this.ax = 0; //x rotation (in degrees, about local origin), initialize to 0 as specific connections set starting position & rotation
         this.ay = 0; //y rotation (in degrees, about local origin), initialize to 0 as specific connections set starting position & rotation
         this.az = 0; //z rotation (in degrees, about local origin), initialize to 0 as specific connections set starting position & rotation
-        */
         this.type = null; //initialize null connection type
         this.mesh = null; //initialize null mesh
         this.hovering = false; //toggle for if connection is being hovered over
@@ -234,11 +231,9 @@ class Connection {
     //move connection (globally)
     move(dx, dy, dz) {
         //update position properties
-        /*TO-DO update coordinates when components moved or just use mesh position
         this.x += dx;
         this.y += dy;
         this.z += dz;
-        */
 
         //move mesh
         this.mesh.position.x += dx;
@@ -876,13 +871,15 @@ class Leaf extends Component {
         for (let j = 0; j < this.connections.length; j++) {
             const conn = this.connections[j];
             conn.connectedTo = null;
-            for (let i = 0; i < components.length; i++) {
+            let found = false;
+            for (let i = 0; i < components.length && !found; i++) {
                 const comp = components[i];
                 if (this.ID != comp.ID) {
                     if (comp.type == "leaf") {
-                        for (let c = 0; c < comp.connections.length; c++) {
+                        for (let c = 0; c < comp.connections.length && !found; c++) {
                             if (conn.mesh.position.equals(comp.connections[c].mesh.position)) {
                                 conn.connectedTo = comp.connections[c];
+                                found = true;
                                 break;
                             }
                         }
@@ -918,7 +915,7 @@ class Stem extends Component {
                 radFill*(1-Math.cos(i*angleBend*Math.PI/180/numFillPts))));
         }
         tubePath.push(new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)));
-        var tubeCap = BABYLON.Mesh.CAP_END;
+        let tubeCap = BABYLON.Mesh.CAP_END;
         if (reflected == 1) {
             tubeCap = BABYLON.Mesh.CAP_START;
         }
@@ -945,8 +942,8 @@ class Stem extends Component {
                 new BABYLON.Vector3(radStem-this.BBOffset/2, 0, radStem-this.BBOffset/2),
                 new BABYLON.Vector3(radStem-this.BBOffset/2, 0, -radStem+this.BBOffset/2)
             ];
-            var preOffset = -1.5*this.BBOffset;
-            var postOffset = this.BBOffset;
+            let preOffset = -1.5*this.BBOffset;
+            let postOffset = this.BBOffset;
             if (reflected == 1) {
                 preOffset = this.BBOffset;
                 postOffset = -1.5*this.BBOffset;
@@ -978,7 +975,7 @@ class Stem extends Component {
                 this.BB.push(postBB);
 
         //create male mesh
-        var maleConnPath = [
+        let maleConnPath = [
             new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)),
             new BABYLON.Vector3((lenStem/2)+(lenStem/2+lenConn)*(Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180))
         ];
@@ -992,7 +989,7 @@ class Stem extends Component {
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         //create female mesh
-        var femConnPath = [
+        let femConnPath = [
             new BABYLON.Vector3(0, 0, 0),
             new BABYLON.Vector3(lenConn, 0, 0)
         ];
@@ -1021,8 +1018,8 @@ class Stem extends Component {
         
         //create stem connections
         const offset = 0.005;
-        var femPos = [0, 0, 0, 0, 0, -90];
-        var malePos = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
+        let femPos = [0, 0, 0, 0, 0, -90];
+        let malePos = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
         if (reflected == 1) {
             femPos = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
             malePos = [0, 0, 0, 0, 0, 90];
@@ -1163,7 +1160,7 @@ class Branch extends Component {
                 spacRem -= (lenSlot+spacHole);
             }
             tempLengths.push(spacRem);
-            var lengths = tempLengths;
+            let lengths = tempLengths;
             if (reflected == 1) {
                 lengths = tempLengths.reverse();
             }
@@ -1272,7 +1269,7 @@ class Trunk extends Component {
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
 
         const edgeRibLast = widthTile-edgeRib-numRibs*thickRib-(numRibs-1)*spacRib; //tile side edge distance after last rib (if not reflected)
-        var edgeRibFirst = edgeRib;
+        let edgeRibFirst = edgeRib;
         if (reflected == 1) {
             edgeRibFirst = edgeRibLast;
         }
@@ -1617,7 +1614,7 @@ class Tree {
             const c = components[i];
             if (c.type == "stem" || c.type == "branch" || c.type == "trunk") {
                 old.push(c);
-                var newReflected = 1;
+                let newReflected = 1;
                 if (c.reflected == 1) {
                     newReflected = 0;
                 }
