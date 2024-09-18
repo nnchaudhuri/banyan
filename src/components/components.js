@@ -86,6 +86,7 @@ class Node extends Element {
         super(scene, component, ID);
         
         //initialize properties
+        //TO-DO update coordinates when components moved
         this.x = x; //node x coordinate
         this.y = y; //node y coordinate
         this.z = z; //node z coordinate
@@ -190,17 +191,12 @@ class Connection {
         this.scene = scene; //scene hosting connection
         this.component = component; //component the connection is a part of
         this.ID = ID; //connection ID
-        this.x = 0; //x position (of local origin), initialize to 0 as specific connections set starting position & rotation
-        this.y = 0; //y position (of local origin), initialize to 0 as specific connections set starting position & rotation
-        this.z = 0; //z position (of local origin), initialize to 0 as specific connections set starting position & rotation
-        this.ax = 0; //x rotation (in degrees, about local origin), initialize to 0 as specific connections set starting position & rotation
-        this.ay = 0; //y rotation (in degrees, about local origin), initialize to 0 as specific connections set starting position & rotation
-        this.az = 0; //z rotation (in degrees, about local origin), initialize to 0 as specific connections set starting position & rotation
         this.type = null; //initialize null connection type
         this.mesh = null; //initialize null mesh
         this.hovering = false; //toggle for if connection is being hovered over
         this.selected = false; //toggle for if connection is selected
         this.connectedTo = null; //what this connection is connected to (null if unused)
+        this.monitors = []; //meshes that assist in checking for aligned connections
         const alpha = 0.5; //transparency value
 
         //default material
@@ -230,12 +226,6 @@ class Connection {
 
     //move connection (globally)
     move(dx, dy, dz) {
-        //update position properties
-        this.x += dx;
-        this.y += dy;
-        this.z += dz;
-
-        //move mesh
         this.mesh.position.x += dx;
         this.mesh.position.y += dy;
         this.mesh.position.z += dz;
@@ -243,12 +233,6 @@ class Connection {
 
     //rotate connection (in degrees, about local origin) FIX!
     rotate(rx, ry, rz) {
-        //update rotation properties
-        this.ax += rx;
-        this.ay += ry;
-        this.az += rz;
-
-        //rotate mesh
         this.mesh.rotate(new BABYLON.Vector3(-1, 0, 0), rx*Math.PI/180, BABYLON.Space.WORLD);
         this.mesh.rotate(new BABYLON.Vector3(0, -1, 0), ry*Math.PI/180, BABYLON.Space.WORLD);
         this.mesh.rotate(new BABYLON.Vector3(0, 0, 1), rz*Math.PI/180, BABYLON.Space.WORLD);
@@ -337,14 +321,6 @@ class Connection {
 
     //set up connection controls & responses
     setupControls() {
-        ///*
-        //create gizmos
-        this.dxGizmo = new BABYLON.AxisDragGizmo(new BABYLON.Vector3(1, 0, 0), this.xCol);
-        this.dxGizmo.snapDistance = this.snapDist;
-        this.dxGizmo.updateGizmoRotationToMatchAttachedMesh = false;
-        this.dxGizmo.attachedMesh = this.mesh;
-        //*/
-        
         //hover over connection
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this, "hovering", false));
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this, "hovering", true));
@@ -373,6 +349,16 @@ class Edge extends Connection {
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
+    }
+
+    //check if this edge is aligned (connectable) to another edge
+    connectable(edge) {
+        if (this.monitors[0].intersectsMesh(edge.monitors[0], true) && this.monitors[1].intersectsMesh(edge.monitors[1], true)) {
+            return true;
+        } else if (this.monitors[0].intersectsMesh(edge.monitors[1], true) && this.monitors[1].intersectsMesh(edge.monitors[0], true)) {
+            return true;
+        }
+        return false;
     }
 }
 
@@ -445,6 +431,7 @@ class Component {
         this.elements = []; //initialize empty structural elements array
         this.connections = []; //initialize empty connections array
         this.showingConnections = false; //toggle for if connections are visible
+        this.monitorSize = 0.1; //connections monitor mesh size
         this.BB = []; //initialize empty bounding boxes array (for mesh intersection detection)
         this.BBOffset = 0.05; //offset for bounding boxes from mesh edges
         this.hovering = false; //toggle for if component is being hovered over
@@ -657,6 +644,9 @@ class Component {
     parentConnections() {
         for (let i = 0; i < this.connections.length; i++) {
             this.connections[i].mesh.parent = this.mesh;
+            for (let j = 0; j < this.connections[i].monitors.length; j++) {
+                this.connections[i].monitors[j].parent = this.mesh;
+            }
         }
     }
 
@@ -832,10 +822,32 @@ class Leaf extends Component {
             this.elements.push(new Area(scene, this, "ijkl", nodeI, nodeJ, nodeK, nodeL, 0.05));
 
         //create connections
-        this.connections.push(new Edge(scene, this, "right", [lenX/2, 0, 0, 0, 0, 0], lenY));
-        this.connections.push(new Edge(scene, this, "top", [0, lenY/2, 0, 0, 0, 90], lenX));
-        this.connections.push(new Edge(scene, this, "left", [-lenX/2, 0, 0, 0, 0, 0], lenY));
-        this.connections.push(new Edge(scene, this, "bottom", [0, -lenY/2, 0, 0, 0, 90], lenX));
+        const right = new Edge(scene, this, "right", [lenX/2, 0, 0, 0, 0, 0], lenY);
+        const top = new Edge(scene, this, "top", [0, lenY/2, 0, 0, 0, 90], lenX);
+        const left = new Edge(scene, this, "left", [-lenX/2, 0, 0, 0, 0, 0], lenY);
+        const bottom = new Edge(scene, this, "bottom", [0, -lenY/2, 0, 0, 0, 90], lenX);
+        
+            //create monitors
+            const ne = BABYLON.MeshBuilder.CreateBox("ne", {size:this.monitorSize});
+            ne.translate(new BABYLON.Vector3(lenX/2, lenY/2, 0), 1, BABYLON.Space.WORLD);
+            //ne.isVisible = false;
+            const nw = BABYLON.MeshBuilder.CreateBox("nw", {size:this.monitorSize});
+            nw.translate(new BABYLON.Vector3(-lenX/2, lenY/2, 0), 1, BABYLON.Space.WORLD);
+            //nw.isVisible = false;
+            const se = BABYLON.MeshBuilder.CreateBox("se", {size:this.monitorSize});
+            se.translate(new BABYLON.Vector3(lenX/2, -lenY/2, 0), 1, BABYLON.Space.WORLD);
+            //se.isVisible = false;
+            const sw = BABYLON.MeshBuilder.CreateBox("sw", {size:this.monitorSize});
+            sw.translate(new BABYLON.Vector3(-lenX/2, -lenY/2, 0), 1, BABYLON.Space.WORLD);
+            //sw.isVisible = false;
+
+            //assign monitors to connections
+            right.monitors = [se, ne];
+            top.monitors = [ne, nw];
+            left.monitors = [nw, sw];
+            bottom.monitors = [sw, se];
+
+        this.connections = [right, top, left, bottom];
 
         //bounding box
         const rectBB = [
@@ -877,10 +889,9 @@ class Leaf extends Component {
                 if (this.ID != comp.ID) {
                     if (comp.type == "leaf") {
                         for (let c = 0; c < comp.connections.length && !found; c++) {
-                            if (conn.mesh.position.equals(comp.connections[c].mesh.position)) {
+                            if (conn.connectable(comp.connections[c])) {
                                 conn.connectedTo = comp.connections[c];
                                 found = true;
-                                break;
                             }
                         }
                     }
