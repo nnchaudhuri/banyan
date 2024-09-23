@@ -1516,6 +1516,7 @@ class Tree {
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
         this.numFillPts = numFillPts; //# of points defining fillet arc resolution
         this.showingGizmos = false; //toggle for gizmo visibility
+        this.history = []; //array of tree versions for undo & redo
 
         //set up controls
         this.setupControls();
@@ -1869,6 +1870,16 @@ class Tree {
                     data[15], data[16], data[17], data[18], this.numArcPts));
             }
         }
+    }
+
+    //undo action (go back to previous tree version)
+    undo() {
+        const maxVersions = 10;
+    }
+
+    //redo action (go back to undone tree version)
+    redo() {
+
     }
 
     //save tree file
