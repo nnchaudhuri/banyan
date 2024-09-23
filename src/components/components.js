@@ -1825,28 +1825,63 @@ class Tree {
         });
     }
 
-    //save tree file
-    save() {
-        const contents = [];
+    //compress tree to string lines
+    compress() {
+        const lines = [];
         for (let i = 0; i < this.components.length; i++) {
             const c = this.components[i];
             if (c.type == "leaf") {
-                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenX, c.lenY, '\n']);
+                lines.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenX, c.lenY, '\n']);
             } else if (c.type == "stem") {
-                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.angleBend, c.lenStem, c.radStem, c.radFill, c.radConn, c.lenConn, c.thickBT, c.reflected, '\n']);
+                lines.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.angleBend, c.lenStem, c.radStem, c.radFill, c.radConn, c.lenConn, c.thickBT, c.reflected, '\n']);
             } else if (c.type == "branch") {
-                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenBranch, c.thickBranch, c.radBranch, c.radHole, c.spacHole, c.lenSlot, c.reflected, '\n']);
+                lines.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenBranch, c.thickBranch, c.radBranch, c.radHole, c.spacHole, c.lenSlot, c.reflected, '\n']);
             } else if (c.type == "trunk") {
-                contents.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenTrunk, c.widthTile, c.thickTile, c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, 
+                lines.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenTrunk, c.widthTile, c.thickTile, c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, 
                     c.radHole, c.spacHole, c.overhang, c.reflected, '\n']);
             }
         }
-        const file = new Blob(contents, {type: "text/plain;charset=utf-8",});
+        return lines;
+    }
+
+    //expand string lines to tree
+    expand(lines) {
+        for (let j = 0; j < lines.length; j++) {
+            const line = lines[j];
+            const dataString = line.split(',');
+            const data = [dataString[0]];
+            for (let i = 1; i < dataString.length; i++) {
+                data.push(parseFloat(dataString[i]));
+            }
+            if (data[0] == "leaf") {
+                this.add(new Leaf(this.scene, this, this.snapDist, this.snapRot, 
+                    [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8]));
+            } else if (data[0] == "stem") {
+                this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, 
+                    [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14],
+                    this.numArcPts, this.numFillPts));
+            } else if (data[0] == "branch") {
+                this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, 
+                    [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], this.numArcPts));
+            } else if (data[0] == "trunk") {
+                this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, 
+                    [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], 
+                    data[15], data[16], data[17], data[18], this.numArcPts));
+            }
+        }
+    }
+
+    //save tree file
+    save() {
+        const file = new Blob(this.compress(), {type: "text/plain;charset=utf-8",});
         saveAs(file, "myTree.txt");
     }
 
     //load tree file
     load() {
+        //store previous tree length
+        let num = this.components.length;
+
         //process file from local browser
         const input = document.createElement('input');
         input.type = 'file';
@@ -1857,32 +1892,12 @@ class Tree {
                 const reader = new FileReader();
                 reader.readAsText(files[0], "utf-8");
                 reader.onload = _ => {
-                    const lines = reader.result.split('\n');
-
                     //create components per file lines
-                    for (let j = 0; j < lines.length; j++) {
-                        const line = lines[j];
-                        const dataString = line.split(',');
-                        const data = [dataString[0]];
-                        for (let i = 1; i < dataString.length; i++) {
-                            data.push(parseFloat(dataString[i]));
-                        }
-                        if (data[0] == "leaf") {
-                            this.add(new Leaf(this.scene, this, this.snapDist, this.snapRot, 
-                                [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8]));
-                        } else if (data[0] == "stem") {
-                            this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, 
-                                [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14],
-                                this.numArcPts, this.numFillPts));
-                        } else if (data[0] == "branch") {
-                            this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, 
-                                [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], this.numArcPts));
-                        } else if (data[0] == "trunk") {
-                            this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, 
-                                [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], 
-                                data[15], data[16], data[17], data[18], this.numArcPts));
-                        }
-                    }
+                    const lines = reader.result.split('\n');
+                    this.expand(lines);
+
+                    //clear previous tree
+                    this.delete(this.components.slice(0, num));
                 }
             }
         }
