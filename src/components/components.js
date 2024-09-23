@@ -299,10 +299,10 @@ class Connection {
 
     //check if this connection is aligned (connectable) to another connection
     connectable(conn) {
-        if (this.monitors.length > 1 && conn.monitors.length > 1) {
-            if (this.monitors[0].intersectsMesh(conn.monitors[0], true) && this.monitors[1].intersectsMesh(conn.monitors[1], true)) {
+        if (this.monitors.length > 1 && conn.monitors.length > 1 && (!this.component.intersecting || !conn.component.intersecting)) {
+            if (this.monitors[0].intersectsMesh(conn.monitors[0], false) && this.monitors[1].intersectsMesh(conn.monitors[1], false)) {
                 return true;
-            } else if (this.monitors[0].intersectsMesh(conn.monitors[1], true) && this.monitors[1].intersectsMesh(conn.monitors[0], true)) {
+            } else if (this.monitors[0].intersectsMesh(conn.monitors[1], false) && this.monitors[1].intersectsMesh(conn.monitors[0], false)) {
                 return true;
             }
         }
@@ -351,7 +351,7 @@ class Edge extends Connection {
         this.type = "edge"; //connection type
 
         //create mesh
-        this.mesh = BABYLON.MeshBuilder.CreatePlane("edge", {height:len, width:0.25, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        this.mesh = BABYLON.MeshBuilder.CreateBox("edge", {height:len, width:0.25, depth:0.05, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         //set starting position & rotation
         this.move(x, y, z);
@@ -433,7 +433,7 @@ class Component {
         this.elements = []; //initialize empty structural elements array
         this.connections = []; //initialize empty connections array
         this.showingConnections = false; //toggle for if connections are visible
-        this.monitorSize = 0.1; //connections monitor mesh size
+        this.monitorSize = 0.05; //connections monitor mesh size
         this.BB = []; //initialize empty bounding boxes array (for mesh intersection detection)
         this.BBOffset = 0.05; //offset for bounding boxes from mesh edges
         this.hovering = false; //toggle for if component is being hovered over
@@ -624,7 +624,7 @@ class Component {
             for (let i = 0; i < components.length && !found; i++) {
                 const comp = components[i];
                 if (this.ID != comp.ID) {
-                    if (comp.type == this.type) {
+                    if ((comp.type == "leaf" && this.type == "leaf") || (comp.type != "leaf" && this.type == "stem") || (comp.type == "stem" && this.type != "leaf")) {
                         for (let c = 0; c < comp.connections.length && !found; c++) {
                             if (conn.connectable(comp.connections[c])) {
                                 conn.connectedTo = comp.connections[c];
@@ -1064,21 +1064,32 @@ class Stem extends Component {
             femStem.monitors = [fi, fo];
             maleStem.monitors = [mi, mo];
 
-        this.connections = [femStem, maleStem];
-
         //create branch/trunk connections
+        let femPosii = [thickBT, 0, 0];
         malePosi = [(lenStem/2)+(lenStem/2-thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-thickBT)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
+        let malePosii = [(lenStem/2)+(lenStem/2-thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-thickBT)*Math.sin(angleBend*Math.PI/180)];
         if (reflected == 1) {
             femPosi = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
+            femPosii = [(lenStem/2)+(lenStem/2-thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-thickBT)*Math.sin(angleBend*Math.PI/180)];
             malePosi = [thickBT, 0, 0, 0, 0, 90];
+            malePosii = [thickBT, 0, 0];
         }
-        this.connections.push(new Joint(scene, this, "femBT", femPosi, radStem+offset/2, thickBT, numArcPts));
-        this.connections.push(new Joint(scene, this, "maleBT", malePosi, radStem+offset/2, thickBT, numArcPts));
+        const femBT = new Joint(scene, this, "femBT", femPosi, radStem+offset/2, thickBT, numArcPts);
+        const maleBT = new Joint(scene, this, "maleBT", malePosi, radStem+offset/2, thickBT, numArcPts);
         
+            //create monitors
+            const fii = BABYLON.MeshBuilder.CreateBox("fii", {size:this.monitorSize});
+            fii.translate(new BABYLON.Vector3(femPosii[0], femPosii[1], femPosii[2]), 1, BABYLON.Space.WORLD);
+            fii.isVisible = false;
+            const mii = BABYLON.MeshBuilder.CreateBox("mii", {size:this.monitorSize});
+            mii.translate(new BABYLON.Vector3(malePosii[0], malePosii[1], malePosii[2]), 1, BABYLON.Space.WORLD);
+            mii.isVisible = false;
 
+            //assign monitors to connections
+            femBT.monitors = [fi, fii];
+            maleBT.monitors = [mi, mii];
 
-
-
+        this.connections = [femStem, maleStem, femBT, maleBT];
 
         //set parents
         this.parentConnections();
@@ -1152,7 +1163,18 @@ class Branch extends Component {
                 this.elements.push(nodeI);
 
                 //create connection
-                this.connections.push(new Joint(scene, this, "left", [0, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts));
+                const leftConn = new Joint(scene, this, "left", [0, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts);
+
+                    //create monitors
+                    const mL0 = BABYLON.MeshBuilder.CreateBox("mL0", {size:this.monitorSize});
+                    mL0.translate(new BABYLON.Vector3(0, 0, 0), 1, BABYLON.Space.WORLD);
+                    mL0.isVisible = false;
+                    const mL1 = BABYLON.MeshBuilder.CreateBox("mL1", {size:this.monitorSize});
+                    mL1.translate(new BABYLON.Vector3(0, -thickBranch, 0), 1, BABYLON.Space.WORLD);
+                    mL1.isVisible = false;
+                    leftConn.monitors = [mL0, mL1];
+                
+                this.connections.push(leftConn);
 
                 //left of holes bounding box
                 const left = [
@@ -1223,7 +1245,18 @@ class Branch extends Component {
                 this.elements.push(nodeJ);
 
                 //create connection
-                this.connections.push(new Joint(scene, this, "right", [lenBranch, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts));
+                const rightConn = new Joint(scene, this, "right", [lenBranch, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts);
+                
+                    //create monitors
+                    const mR0 = BABYLON.MeshBuilder.CreateBox("mR0", {size:this.monitorSize});
+                    mR0.translate(new BABYLON.Vector3(lenBranch, 0, 0), 1, BABYLON.Space.WORLD);
+                    mR0.isVisible = false;
+                    const mR1 = BABYLON.MeshBuilder.CreateBox("mR1", {size:this.monitorSize});
+                    mR1.translate(new BABYLON.Vector3(lenBranch, -thickBranch, 0), 1, BABYLON.Space.WORLD);
+                    mR1.isVisible = false;
+                    rightConn.monitors = [mR0, mR1];
+                
+                this.connections.push(rightConn);
 
                 //right of holes bounding box
                 const right = [
@@ -1350,8 +1383,18 @@ class Trunk extends Component {
                 holes.push(hole);
 
                 //create connection
-                this.connections.push(new Joint(scene, this, j.toString+","+k.toString(), [i, -edgeRibFirst-thickRib-j*(thickRib+spacRib), 0, 0, 0, 0], 
-                    radHole, thickRib, numArcPts));
+                const holeConn = new Joint(scene, this, j.toString+","+k.toString(), [i, -edgeRibFirst-thickRib-j*(thickRib+spacRib), 0, 0, 0, 0], radHole, thickRib, numArcPts);
+
+                    //create monitors
+                    const m0 = BABYLON.MeshBuilder.CreateBox("m0", {size:this.monitorSize});
+                    m0.translate(new BABYLON.Vector3(i, -edgeRibFirst-j*(thickRib+spacRib), 0), 1, BABYLON.Space.WORLD);
+                    m0.isVisible = false;
+                    const m1 = BABYLON.MeshBuilder.CreateBox("m1", {size:this.monitorSize});
+                    m1.translate(new BABYLON.Vector3(i, -edgeRibFirst-thickRib-j*(thickRib+spacRib), 0), 1, BABYLON.Space.WORLD);
+                    m1.isVisible = false;
+                    holeConn.monitors = [m0, m1];
+                
+                this.connections.push(holeConn);
                 k++;
             }
 
@@ -1720,7 +1763,7 @@ class Tree {
                             this.deselect(this.components);
                             this.hideGizmos(this.components);
                             this.deselectConnections(this.components);
-                            this.hideConnections(this.components);
+                            //this.hideConnections(this.components);
                         break
                         
                         //delete key deletes selected components
