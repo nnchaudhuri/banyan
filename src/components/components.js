@@ -297,6 +297,18 @@ class Connection {
         }
     }
 
+    //check if this connection is aligned (connectable) to another connection
+    connectable(conn) {
+        if (this.monitors.length > 1 && conn.monitors.length > 1) {
+            if (this.monitors[0].intersectsMesh(conn.monitors[0], true) && this.monitors[1].intersectsMesh(conn.monitors[1], true)) {
+                return true;
+            } else if (this.monitors[0].intersectsMesh(conn.monitors[1], true) && this.monitors[1].intersectsMesh(conn.monitors[0], true)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     //set up connection visuals
     setupVisuals() {
         //default visibility
@@ -349,16 +361,6 @@ class Edge extends Connection {
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
-    }
-
-    //check if this edge is aligned (connectable) to another edge
-    connectable(edge) {
-        if (this.monitors[0].intersectsMesh(edge.monitors[0], true) && this.monitors[1].intersectsMesh(edge.monitors[1], true)) {
-            return true;
-        } else if (this.monitors[0].intersectsMesh(edge.monitors[1], true) && this.monitors[1].intersectsMesh(edge.monitors[0], true)) {
-            return true;
-        }
-        return false;
     }
 }
 
@@ -612,6 +614,28 @@ class Component {
             this.connections[i].deselect();
         }
     }
+    
+    //checks for valid connections from this component to other components
+    checkConnections(components) {
+        for (let j = 0; j < this.connections.length; j++) {
+            const conn = this.connections[j];
+            conn.connectedTo = null;
+            let found = false;
+            for (let i = 0; i < components.length && !found; i++) {
+                const comp = components[i];
+                if (this.ID != comp.ID) {
+                    if (comp.type == this.type) {
+                        for (let c = 0; c < comp.connections.length && !found; c++) {
+                            if (conn.connectable(comp.connections[c])) {
+                                conn.connectedTo = comp.connections[c];
+                                found = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     //show structural elements
     showElements() {
@@ -666,10 +690,12 @@ class Component {
         
     //check for mesh intersection between this & another component based on bounding boxes
     intersects(component) {
-        for (let j = 0; j < this.BB.length; j++) {
-            for (let i = 0; i < component.BB.length; i++) {
-                if (this.BB[j].intersectsMesh(component.BB[i], true)) {
-                    return true;
+        if (this.mesh.intersectsMesh(component.mesh, true)) {
+            for (let j = 0; j < this.BB.length; j++) {
+                for (let i = 0; i < component.BB.length; i++) {
+                    if (this.BB[j].intersectsMesh(component.BB[i], true)) {
+                        return true;
+                    }
                 }
             }
         }
@@ -830,16 +856,16 @@ class Leaf extends Component {
             //create monitors
             const ne = BABYLON.MeshBuilder.CreateBox("ne", {size:this.monitorSize});
             ne.translate(new BABYLON.Vector3(lenX/2, lenY/2, 0), 1, BABYLON.Space.WORLD);
-            //ne.isVisible = false;
+            ne.isVisible = false;
             const nw = BABYLON.MeshBuilder.CreateBox("nw", {size:this.monitorSize});
             nw.translate(new BABYLON.Vector3(-lenX/2, lenY/2, 0), 1, BABYLON.Space.WORLD);
-            //nw.isVisible = false;
+            nw.isVisible = false;
             const se = BABYLON.MeshBuilder.CreateBox("se", {size:this.monitorSize});
             se.translate(new BABYLON.Vector3(lenX/2, -lenY/2, 0), 1, BABYLON.Space.WORLD);
-            //se.isVisible = false;
+            se.isVisible = false;
             const sw = BABYLON.MeshBuilder.CreateBox("sw", {size:this.monitorSize});
             sw.translate(new BABYLON.Vector3(-lenX/2, -lenY/2, 0), 1, BABYLON.Space.WORLD);
-            //sw.isVisible = false;
+            sw.isVisible = false;
 
             //assign monitors to connections
             right.monitors = [se, ne];
@@ -876,28 +902,6 @@ class Leaf extends Component {
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
         this.inclGizmos = [true, true, true, false, false, true]; //array of which gizmos to include [dx, dy, dz, rx, ry, rz]
-    }
-
-    //checks for valid connections from this leaf's edges to other leafs edges
-    checkConnections(components) {
-        for (let j = 0; j < this.connections.length; j++) {
-            const conn = this.connections[j];
-            conn.connectedTo = null;
-            let found = false;
-            for (let i = 0; i < components.length && !found; i++) {
-                const comp = components[i];
-                if (this.ID != comp.ID) {
-                    if (comp.type == "leaf") {
-                        for (let c = 0; c < comp.connections.length && !found; c++) {
-                            if (conn.connectable(comp.connections[c])) {
-                                conn.connectedTo = comp.connections[c];
-                                found = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -1029,24 +1033,53 @@ class Stem extends Component {
         
         //create stem connections
         const offset = 0.005;
-        let femPos = [0, 0, 0, 0, 0, -90];
-        let malePos = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
+        let femPosi = [0, 0, 0, 0, 0, -90];
+        let femPoso = [lenConn, 0, 0];
+        let malePosi = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
+        let malePoso = [(lenStem/2)+(lenStem/2+lenConn)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180)];
         if (reflected == 1) {
-            femPos = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
-            malePos = [0, 0, 0, 0, 0, 90];
+            femPosi = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
+            femPoso = [(lenStem/2)+(lenStem/2-lenConn)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-lenConn)*Math.sin(angleBend*Math.PI/180)];
+            malePosi = [0, 0, 0, 0, 0, 90];
+            malePoso = [-lenConn, 0, 0];
         }
-        this.connections.push(new Joint(scene, this, "femStem", femPos, radStem+offset, lenConn, numArcPts));
-        this.connections.push(new Joint(scene, this, "maleStem", malePos, radStem+offset, lenConn, numArcPts));
+        const femStem = new Joint(scene, this, "femStem", femPosi, radStem+offset, lenConn, numArcPts);
+        const maleStem = new Joint(scene, this, "maleStem", malePosi, radStem+offset, lenConn, numArcPts);
+
+            //create monitors
+            const fi = BABYLON.MeshBuilder.CreateBox("fi", {size:this.monitorSize});
+            fi.translate(new BABYLON.Vector3(femPosi[0], femPosi[1], femPosi[2]), 1, BABYLON.Space.WORLD);
+            fi.isVisible = false;
+            const fo = BABYLON.MeshBuilder.CreateBox("fo", {size:this.monitorSize});
+            fo.translate(new BABYLON.Vector3(femPoso[0], femPoso[1], femPoso[2]), 1, BABYLON.Space.WORLD);
+            fo.isVisible = false;
+            const mi = BABYLON.MeshBuilder.CreateBox("mi", {size:this.monitorSize});
+            mi.translate(new BABYLON.Vector3(malePosi[0], malePosi[1], malePosi[2]), 1, BABYLON.Space.WORLD);
+            mi.isVisible = false;
+            const mo = BABYLON.MeshBuilder.CreateBox("mo", {size:this.monitorSize});
+            mo.translate(new BABYLON.Vector3(malePoso[0], malePoso[1], malePoso[2]), 1, BABYLON.Space.WORLD);
+            mo.isVisible = false;
+
+            //assign monitors to connections
+            femStem.monitors = [fi, fo];
+            maleStem.monitors = [mi, mo];
+
+        this.connections = [femStem, maleStem];
 
         //create branch/trunk connections
-        malePos = [(lenStem/2)+(lenStem/2-thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-thickBT)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
+        malePosi = [(lenStem/2)+(lenStem/2-thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-thickBT)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
         if (reflected == 1) {
-            femPos = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
-            malePos = [thickBT, 0, 0, 0, 0, 90];
+            femPosi = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
+            malePosi = [thickBT, 0, 0, 0, 0, 90];
         }
-        this.connections.push(new Joint(scene, this, "femBT", femPos, radStem+offset/2, thickBT, numArcPts));
-        this.connections.push(new Joint(scene, this, "maleBT", malePos, radStem+offset/2, thickBT, numArcPts));
+        this.connections.push(new Joint(scene, this, "femBT", femPosi, radStem+offset/2, thickBT, numArcPts));
+        this.connections.push(new Joint(scene, this, "maleBT", malePosi, radStem+offset/2, thickBT, numArcPts));
         
+
+
+
+
+
         //set parents
         this.parentConnections();
         this.parentBB();
@@ -1062,36 +1095,6 @@ class Stem extends Component {
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
         this.inclGizmos = [true, true, true, true, false, false]; //array of which gizmos to include [dx, dy, dz, rx, ry, rz]
-    }
-
-    //checks for valid connections from this stem's joints to other components joints
-    checkConnections(components) {
-        for (let j = 0; j < this.connections.length; j++) {
-            const conn = this.connections[j];
-            conn.connectedTo = null;
-            for (let i = 0; i < components.length; i++) {
-                const comp = components[i];
-                if (this.ID != comp.ID) {
-                    if (comp.type == "stem") {
-                        if (conn.ID == "femStem" && conn.mesh.position.equalsWithEpsilon(comp.connections[1].mesh.position)) { //[1] --> maleStem
-                        //if (conn.ID == "femStem") { //[1] --> maleStem
-                            conn.connectedTo = comp.connections[1];
-                            break;
-                        } else if (conn.ID == "maleStem" && conn.mesh.position.equalsWithEpsilon(comp.connections[0].mesh.position)) { //[0] --> femStem 
-                        //} else if (conn.ID == "maleStem") { //[0] --> femStem 
-                            conn.connectedTo = comp.connections[0];
-                            break;
-                        } else {
-                            //
-                        }
-                    } else if (comp.type == "branch") {
-        
-                    } else if (comp.type == "trunk") {
-        
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -1611,9 +1614,7 @@ class Tree {
     //checks for connections between specified components
     checkConnections(components) {
         for (let i = 0; i < components.length; i++) {
-            if (components[i].type == "leaf") {
-                components[i].checkConnections(components);
-            }
+            components[i].checkConnections(components);
         }
     }
 
