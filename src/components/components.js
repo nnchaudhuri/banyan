@@ -1047,13 +1047,13 @@ class Stem extends Component {
         const maleStem = new Joint(scene, this, "maleStem", malePosi, radStem+offset, lenConn, numArcPts);
 
             //create monitors
-            const fi = BABYLON.MeshBuilder.CreateBox("fi", {size:this.monitorSize});
+            let fi = BABYLON.MeshBuilder.CreateBox("fi", {size:this.monitorSize});
             fi.translate(new BABYLON.Vector3(femPosi[0], femPosi[1], femPosi[2]), 1, BABYLON.Space.WORLD);
             fi.isVisible = false;
             const fo = BABYLON.MeshBuilder.CreateBox("fo", {size:this.monitorSize});
             fo.translate(new BABYLON.Vector3(femPoso[0], femPoso[1], femPoso[2]), 1, BABYLON.Space.WORLD);
             fo.isVisible = false;
-            const mi = BABYLON.MeshBuilder.CreateBox("mi", {size:this.monitorSize});
+            let mi = BABYLON.MeshBuilder.CreateBox("mi", {size:this.monitorSize});
             mi.translate(new BABYLON.Vector3(malePosi[0], malePosi[1], malePosi[2]), 1, BABYLON.Space.WORLD);
             mi.isVisible = false;
             const mo = BABYLON.MeshBuilder.CreateBox("mo", {size:this.monitorSize});
@@ -1063,33 +1063,45 @@ class Stem extends Component {
             //assign monitors to connections
             femStem.monitors = [fi, fo];
             maleStem.monitors = [mi, mo];
+        
+        this.connections = [femStem, maleStem];
 
         //create branch/trunk connections
-        let femPosii = [thickBT, 0, 0];
-        malePosi = [(lenStem/2)+(lenStem/2-thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-thickBT)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
-        let malePosii = [(lenStem/2)+(lenStem/2-thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-thickBT)*Math.sin(angleBend*Math.PI/180)];
-        if (reflected == 1) {
-            femPosi = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
-            femPosii = [(lenStem/2)+(lenStem/2-thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-thickBT)*Math.sin(angleBend*Math.PI/180)];
-            malePosi = [thickBT, 0, 0, 0, 0, 90];
-            malePosii = [thickBT, 0, 0];
+        let spaceRem = lenStem/2-radFill*Math.tan(angleBend*Math.PI/360);
+        let i = 1;
+        while (spaceRem >= thickBT) {
+            femPosi = [(i-1)*thickBT, 0, 0, 0, 0, -90];
+            let femPosii = [i*thickBT, 0, 0];
+            malePosi = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
+            let malePosii = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180)];
+            if (reflected == 1) {
+                femPosi = [(lenStem/2)+(lenStem/2-(i-1)*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-(i-1)*thickBT)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
+                femPosii = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180)];
+                malePosi = [i*thickBT, 0, 0, 0, 0, 90];
+                malePosii = [i*thickBT, 0, 0];
+            }
+            const femBT = new Joint(scene, this, "femBT", femPosi, radStem+offset/2, thickBT, numArcPts);
+            const maleBT = new Joint(scene, this, "maleBT", malePosi, radStem+offset/2, thickBT, numArcPts);
+            
+                //create monitors
+                const fii = BABYLON.MeshBuilder.CreateBox("fii", {size:this.monitorSize});
+                fii.translate(new BABYLON.Vector3(femPosii[0], femPosii[1], femPosii[2]), 1, BABYLON.Space.WORLD);
+                fii.isVisible = false;
+                const mii = BABYLON.MeshBuilder.CreateBox("mii", {size:this.monitorSize});
+                mii.translate(new BABYLON.Vector3(malePosii[0], malePosii[1], malePosii[2]), 1, BABYLON.Space.WORLD);
+                mii.isVisible = false;
+
+                //assign monitors to connections
+                femBT.monitors = [fi, fii];
+                maleBT.monitors = [mi, mii];
+                
+            this.connections.push(femBT);
+            this.connections.push(maleBT);
+            mi = mii;
+            fi = fii;
+            spaceRem -= thickBT;
+            i++;
         }
-        const femBT = new Joint(scene, this, "femBT", femPosi, radStem+offset/2, thickBT, numArcPts);
-        const maleBT = new Joint(scene, this, "maleBT", malePosi, radStem+offset/2, thickBT, numArcPts);
-        
-            //create monitors
-            const fii = BABYLON.MeshBuilder.CreateBox("fii", {size:this.monitorSize});
-            fii.translate(new BABYLON.Vector3(femPosii[0], femPosii[1], femPosii[2]), 1, BABYLON.Space.WORLD);
-            fii.isVisible = false;
-            const mii = BABYLON.MeshBuilder.CreateBox("mii", {size:this.monitorSize});
-            mii.translate(new BABYLON.Vector3(malePosii[0], malePosii[1], malePosii[2]), 1, BABYLON.Space.WORLD);
-            mii.isVisible = false;
-
-            //assign monitors to connections
-            femBT.monitors = [fi, fii];
-            maleBT.monitors = [mi, mii];
-
-        this.connections = [femStem, maleStem, femBT, maleBT];
 
         //set parents
         this.parentConnections();
