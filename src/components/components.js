@@ -1556,60 +1556,77 @@ class Tree {
     }
 
     //copy specified components
-    copy(components) {
-        for (let i = 0; i < components.length; i++) {
-            //create duplicate component
-            const c = components[i];
-            if (c.type == "leaf") {
-                this.add(new Leaf(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenX, c.lenY));
-            } else if (c.type == "stem") {
-                this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, c.radFill, 
-                    c.radConn, c.lenConn, c.thickBT, c.reflected, this.numArcPts, this.numFillPts));
-            } else if (c.type == "branch") {
-                this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, c.radBranch, 
-                    c.radHole, c.spacHole, c.lenSlot, c.reflected, this.numArcPts));
-            } else if (c.type == "trunk") {
-                this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
-                    c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, c.reflected, this.numArcPts));
+    async copy(components) {
+        await new Promise((resolve) => {
+            for (let i = 0; i < components.length; i++) {
+                //create duplicate component
+                const c = components[i];
+                if (c.type == "leaf") {
+                    this.add(new Leaf(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenX, c.lenY));
+                } else if (c.type == "stem") {
+                    this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, c.radFill, 
+                        c.radConn, c.lenConn, c.thickBT, c.reflected, this.numArcPts, this.numFillPts));
+                } else if (c.type == "branch") {
+                    this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, c.radBranch, 
+                        c.radHole, c.spacHole, c.lenSlot, c.reflected, this.numArcPts));
+                } else if (c.type == "trunk") {
+                    this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
+                        c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, c.reflected, this.numArcPts));
+                }
+
+                //maintain visuals
+                if (c.structureMode) {
+                    this.components[this.components.length-1].showElements();
+                }
+                if (c.transparent) {
+                    this.components[this.components.length-1].xray();
+                }
+                if (c.showingConnections) {
+                    this.components[this.components.length-1].showConnections();
+                }
             }
 
-            //maintain visuals
-            if (c.structureMode) {
-                this.components[this.components.length-1].showElements();
-            }
-            if (c.transparent) {
-                this.components[this.components.length-1].xray();
-            }
-            if (c.showingConnections) {
-                this.components[this.components.length-1].showConnections();
-            }
-        }
+            resolve(); //resolve promise
+        });
 
         //log updated tree
         this.log();
     }
     
     //delete specified components
-    delete(components) {
-        //temporarily copy components array so deletion does not affect iteration
-        const temp = [];
-        for (let i = 0; i < components.length; i++) {
-            temp.push(components[i]);
-        }
-
-        //delete components
-        for (let i = 0; i < temp.length; i++) {
-            const c = temp[i];
-            const index = this.componentIDs.indexOf(c.ID);
-            if (index > -1) {
-                this.componentIDs.splice(index, 1);
-                this.components.splice(index, 1);
-                c.deselect();
-                c.delete();
+    async delete(components) {
+        return new Promise((resolve) => {
+            //temporarily copy components array so deletion does not affect iteration
+            const temp = [];
+            for (let i = 0; i < components.length; i++) {
+                temp.push(components[i]);
             }
-        }
-        temp = [];
 
+            //delete components
+            for (let i = 0; i < temp.length; i++) {
+                const c = temp[i];
+                const index = this.componentIDs.indexOf(c.ID);
+                if (index > -1) {
+                    this.componentIDs.splice(index, 1);
+                    this.components.splice(index, 1);
+                    c.deselect();
+                    c.delete();
+                }
+            }
+            temp = [];
+
+            resolve(); //resolve promise
+        });
+    }
+
+    //delete specified components & log updated tree
+    async formalDelete(components) {
+        await new Promise((resolve) => {
+            this.delete(components);
+
+            resolve(); //resolve promise
+        });
+        
         //log updated tree
         this.log();
     }
@@ -1712,48 +1729,52 @@ class Tree {
     }
 
     //reflects specified components
-    reflect(components) {
-        const old = [];
-        const num = components.length;
-        for (let i = 0; i < num; i++) {
-            const c = components[i];
-            if (c.type == "stem" || c.type == "branch" || c.type == "trunk") {
-                old.push(c);
+    async reflect(components) {
+        await new Promise((resolve) => {
+            const old = [];
+            const num = components.length;
+            for (let i = 0; i < num; i++) {
+                const c = components[i];
+                if (c.type == "stem" || c.type == "branch" || c.type == "trunk") {
+                    old.push(c);
 
-                //update reflected toggle
-                let newReflected = 1;
-                if (c.reflected == 1) {
-                    newReflected = 0;
-                }
-                
-                //create reflected version of component
-                if (c.type == "stem") {
-                    this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, c.radFill, 
-                        c.radConn, c.lenConn, c.thickBT, newReflected, this.numArcPts, this.numFillPts));
-                } else if (c.type == "branch") {
-                    this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, c.radBranch, 
-                        c.radHole, c.spacHole, c.lenSlot, newReflected, this.numArcPts));
-                } else if (c.type == "trunk") {
-                    this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
-                        c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, newReflected, this.numArcPts));
-                }
+                    //update reflected toggle
+                    let newReflected = 1;
+                    if (c.reflected == 1) {
+                        newReflected = 0;
+                    }
+                    
+                    //create reflected version of component
+                    if (c.type == "stem") {
+                        this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, c.radFill, 
+                            c.radConn, c.lenConn, c.thickBT, newReflected, this.numArcPts, this.numFillPts));
+                    } else if (c.type == "branch") {
+                        this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, c.radBranch, 
+                            c.radHole, c.spacHole, c.lenSlot, newReflected, this.numArcPts));
+                    } else if (c.type == "trunk") {
+                        this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
+                            c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, newReflected, this.numArcPts));
+                    }
 
-                //maintain selections & visuals
-                this.components[this.components.length-1].select();
-                if (c.structureMode) {
-                    this.components[this.components.length-1].showElements();
-                }
-                if (c.transparent) {
-                    this.components[this.components.length-1].xray();
-                }
-                if (c.showingConnections) {
-                    this.components[this.components.length-1].showConnections();
+                    //maintain selections & visuals
+                    this.components[this.components.length-1].select();
+                    if (c.structureMode) {
+                        this.components[this.components.length-1].showElements();
+                    }
+                    if (c.transparent) {
+                        this.components[this.components.length-1].xray();
+                    }
+                    if (c.showingConnections) {
+                        this.components[this.components.length-1].showConnections();
+                    }
                 }
             }
-        }
 
-        //delete non-reflected (old) components
-        this.delete(old);
+            //delete non-reflected (old) components
+            this.delete(old);
+
+            resolve(); //resolve promise
+        });
 
         //log updated tree
         this.log();
@@ -1827,7 +1848,7 @@ class Tree {
                         
                         //delete key deletes selected components
                         case "Delete":
-                            this.delete(this.selComponents);
+                            this.formalDelete(this.selComponents);
                         break
 
                         //n key toggles connections visibility for all components
@@ -1984,32 +2005,43 @@ class Tree {
     }
 
     //load tree file
-    load() {
+    async load() {
         //store previous tree length
         let num = this.components.length;
-
+    
         //process file from local browser
         const input = document.createElement('input');
         input.type = 'file';
         input.click();
-        input.onchange = _ => {
-            const files = input.files;
-            if (files.length > 0) {
-                const reader = new FileReader();
-                reader.readAsText(files[0], "utf-8");
-                reader.onload = _ => {
-                    //create components per file lines
-                    const lines = reader.result.split('\n');
-                    this.expand(lines);
+    
+        //wrap file selection and reading in a promise
+        await new Promise((resolve, reject) => {
+            input.onchange = () => {
+                const files = input.files;
+                if (files.length > 0) {
+                    const reader = new FileReader();
+                    reader.readAsText(files[0], "utf-8");
+                    reader.onload = () => {
+                        //create components per file lines
+                        const lines = reader.result.split('\n');
+                        this.expand(lines);
 
-                    //clear previous tree
-                    this.delete(this.components.slice(0, num));
+                        //clear previous tree
+                        this.delete(this.components.slice(0, num));
+
+                        resolve(); //resolve promise
+                    };
+                    reader.onerror = () => {
+                        reject(reader.error);  //reject the promise in case of errors
+                    };
+                } else {
+                    reject(new Error("no file selected"));
                 }
-            }
+            };
+        });
 
-            //log loaded tree
-            this.log();
-        }
+        //log loaded tree
+        this.log();
     }
 }
 
@@ -2023,11 +2055,11 @@ const createScene = async function () {
     //console for debugging
     const DEBUG = true;
     if (DEBUG) {
-        await new Promise(r => {
+        await new Promise(resolve => {
             var s = document.createElement("script");
             s.src = "https://console3.babylonjs.xyz/console3-playground.js";
             document.head.appendChild(s);
-            s.onload = r();
+            s.onload = resolve();
         })
         var c3 = window.console3;
         c3.create(engine, scene);
