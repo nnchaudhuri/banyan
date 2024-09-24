@@ -1849,6 +1849,16 @@ class Tree {
                             this.reflect(this.selComponents);
                         break
 
+                        //[ key is undo action
+                        case "BracketLeft":
+                            this.undo();
+                        break
+
+                        //] key is redo action
+                        case "BracketRight":
+                            this.redo();
+                        break
+
                         //l key loads tree file
                         case "l":
                         case "L":
@@ -1927,10 +1937,10 @@ class Tree {
 
     //undo action (go back to previous tree version in history)
     undo() {
-        //clear current tree
-        this.delete(this.components);
-
         if (this.history.length > 1) {
+            //clear current tree
+            this.delete(this.components);
+        
             //move current tree to future
             this.future.push(this.history.pop());
 
@@ -1941,7 +1951,16 @@ class Tree {
 
     //redo action (go back to undone tree version in future)
     redo() {
+        if (this.future.length > 0) {
+            //clear current tree
+            this.delete(this.components);
+        
+            //move undone tree from future to history
+            this.history.push(this.future.pop());
 
+            //expand undone tree version
+            this.expand(this.history[this.history.length-1]);
+        }
     }
 
     //save tree file
