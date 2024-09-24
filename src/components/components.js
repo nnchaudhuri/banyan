@@ -1520,7 +1520,7 @@ class Trunk extends Component {
 
 //define tree class (group of components --> furniture)
 class Tree {
-    constructor(scene, snapDist, snapRot, numArcPts, numFillPts) {
+    constructor(scene, snapDist, snapRot, numArcPts, numFillPts, DEBUG, c3) {
 
         //initialize properties
         this.scene = scene; //scene hosting tree
@@ -1536,6 +1536,12 @@ class Tree {
         this.showingGizmos = false; //toggle for gizmo visibility
         this.history = []; //array of tree versions for undo
         this.future = []; //array of tree versions for redo
+
+        //console for debugging
+        if (DEBUG) {
+            this.c3 = c3;
+            this.c3.log("tree created");
+        }
 
         //set up controls
         this.setupControls();
@@ -1850,12 +1856,12 @@ class Tree {
                         break
 
                         //[ key is undo action
-                        case "BracketLeft":
+                        case "[":
                             this.undo();
                         break
 
                         //] key is redo action
-                        case "BracketRight":
+                        case "]":
                             this.redo();
                         break
 
@@ -1881,16 +1887,18 @@ class Tree {
         const lines = [];
         for (let i = 0; i < this.components.length; i++) {
             const c = this.components[i];
+            let line = [];
             if (c.type == "leaf") {
-                lines.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenX, c.lenY, '\n']);
+                line = [c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenX, c.lenY, '\n'];
             } else if (c.type == "stem") {
-                lines.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.angleBend, c.lenStem, c.radStem, c.radFill, c.radConn, c.lenConn, c.thickBT, c.reflected, '\n']);
+                line = [c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.angleBend, c.lenStem, c.radStem, c.radFill, c.radConn, c.lenConn, c.thickBT, c.reflected, '\n'];
             } else if (c.type == "branch") {
-                lines.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenBranch, c.thickBranch, c.radBranch, c.radHole, c.spacHole, c.lenSlot, c.reflected, '\n']);
+                line = [c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenBranch, c.thickBranch, c.radBranch, c.radHole, c.spacHole, c.lenSlot, c.reflected, '\n'];
             } else if (c.type == "trunk") {
-                lines.push([c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenTrunk, c.widthTile, c.thickTile, c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, 
-                    c.radHole, c.spacHole, c.overhang, c.reflected, '\n']);
+                line = [c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenTrunk, c.widthTile, c.thickTile, c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, 
+                    c.radHole, c.spacHole, c.overhang, c.reflected, '\n'];
             }
+            lines.push(line.toString());
         }
         return lines;
     }
@@ -1898,9 +1906,9 @@ class Tree {
     //expand string lines to tree
     expand(lines) {
         for (let j = 0; j < lines.length; j++) {
-            const line = lines[j];
-            const dataString = line.split(',');
-            const data = [dataString[0]];
+            let line = lines[j];
+            let dataString = line.split(',');
+            let data = [dataString[0]];
             for (let i = 1; i < dataString.length; i++) {
                 data.push(parseFloat(dataString[i]));
             }
@@ -1925,7 +1933,7 @@ class Tree {
     //log tree version (in history)
     log() {
         const maxVersions = 10;
-        
+
         //add version to history
         this.history.push(this.compress());
 
@@ -1938,28 +1946,34 @@ class Tree {
     //undo action (go back to previous tree version in history)
     undo() {
         if (this.history.length > 1) {
-            //clear current tree
-            this.delete(this.components);
-        
+            //store current tree length
+            let num = this.components.length;
+            
             //move current tree to future
             this.future.push(this.history.pop());
 
             //expand previous tree version
             this.expand(this.history[this.history.length-1]);
+
+            //clear current tree
+            this.delete(this.components.slice(0, num));
         }
     }
 
     //redo action (go back to undone tree version in future)
     redo() {
         if (this.future.length > 0) {
-            //clear current tree
-            this.delete(this.components);
+            //store current tree length
+            let num = this.components.length;
         
             //move undone tree from future to history
             this.history.push(this.future.pop());
 
             //expand undone tree version
             this.expand(this.history[this.history.length-1]);
+
+            //clear current tree
+            this.delete(this.components.slice(0, num));
         }
     }
 
@@ -1990,37 +2004,35 @@ class Tree {
 
                     //clear previous tree
                     this.delete(this.components.slice(0, num));
-
-                    //log loaded tree
-                    this.log();
                 }
             }
+
+            //log loaded tree
+            this.log();
         }
     }
 }
 
 //create scene
-//const createScene = async function () { //for debugging
-const createScene = function () {
-	
-    /*console for debugging
-    await new Promise(r => {
-        var s = document.createElement("script");
-        s.src = "https://console3.babylonjs.xyz/console3-playground.js";
-        document.head.appendChild(s);
-        s.onload = r();
-    })
-    */
+const createScene = async function () {
 
     //setup scene
     var scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(1, 1, 1, 1);
 
-    /*console for debugging
-    var c3 = window.console3;
-    c3.create(engine, scene);
-    c3.log("scene created");
-    */
+    //console for debugging
+    const DEBUG = true;
+    if (DEBUG) {
+        await new Promise(r => {
+            var s = document.createElement("script");
+            s.src = "https://console3.babylonjs.xyz/console3-playground.js";
+            document.head.appendChild(s);
+            s.onload = r();
+        })
+        var c3 = window.console3;
+        c3.create(engine, scene);
+        c3.log("scene created");
+    }
 
     //setup camera
 	const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI/4, Math.PI/4, 100, BABYLON.Vector3.Zero());
@@ -2090,14 +2102,7 @@ const createScene = function () {
     const numFillPts = 32; //# of points defining fillet arc resolution
 
     //create test tree
-    const tree = new Tree(scene, snapDist, snapRot, numArcPts, numFillPts);
-    /*
-    tree.add(new Leaf(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenX, lenY));
-    tree.add(new Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, thickBranch, 0, numArcPts, numFillPts));
-    tree.add(new Branch(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, 0, numArcPts));
-    tree.add(new Trunk(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, 
-        radHole, spacHole, overhang, 0, numArcPts));
-    */
+    let tree = new Tree(scene, snapDist, snapRot, numArcPts, numFillPts, DEBUG, c3);
     tree.load();
 
     //component render updates
