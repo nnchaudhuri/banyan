@@ -804,12 +804,30 @@ class Component {
         this.rzGizmo.updateGizmoRotationToMatchAttachedMesh = false;
 
         //update component position & rotation properties per gizmo events FIX!
-        this.dxGizmo.onSnapObservable.add(event => {this.x += event.snapDistance});
-        this.dyGizmo.onSnapObservable.add(event => {this.y += event.snapDistance});
-        this.dzGizmo.onSnapObservable.add(event => {this.z += event.snapDistance});
-        this.rxGizmo.onSnapObservable.add(event => {this.ax += Math.round(event.snapDistance*180/Math.PI)});
-        this.ryGizmo.onSnapObservable.add(event => {this.ay += Math.round(event.snapDistance*180/Math.PI)});
-        this.rzGizmo.onSnapObservable.add(event => {this.az += Math.round(event.snapDistance*180/Math.PI)});
+        this.dxGizmo.onSnapObservable.add(event => {
+            this.x += event.snapDistance;
+            this.tree.log();
+        });
+        this.dyGizmo.onSnapObservable.add(event => {
+            this.y += event.snapDistance;
+            this.tree.log();
+        });
+        this.dzGizmo.onSnapObservable.add(event => {
+            this.z += event.snapDistance;
+            this.tree.log();
+        });
+        this.rxGizmo.onSnapObservable.add(event => {
+            this.ax += Math.round(event.snapDistance*180/Math.PI);
+            this.tree.log();
+        });
+        this.ryGizmo.onSnapObservable.add(event => {
+            this.ay += Math.round(event.snapDistance*180/Math.PI);
+            this.tree.log();
+        });
+        this.rzGizmo.onSnapObservable.add(event => {
+            this.az += Math.round(event.snapDistance*180/Math.PI);
+            this.tree.log();
+        });
 
         //hover over component
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this, "hovering", false));
@@ -1516,7 +1534,8 @@ class Tree {
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
         this.numFillPts = numFillPts; //# of points defining fillet arc resolution
         this.showingGizmos = false; //toggle for gizmo visibility
-        this.history = []; //array of tree versions for undo & redo
+        this.history = []; //array of tree versions for undo
+        this.future = []; //array of tree versions for redo
 
         //set up controls
         this.setupControls();
@@ -1533,6 +1552,7 @@ class Tree {
     //copy specified components
     copy(components) {
         for (let i = 0; i < components.length; i++) {
+            //create duplicate component
             const c = components[i];
             if (c.type == "leaf") {
                 this.add(new Leaf(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenX, c.lenY));
@@ -1546,6 +1566,8 @@ class Tree {
                 this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
                     c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, c.reflected, this.numArcPts));
             }
+
+            //maintain visuals
             if (c.structureMode) {
                 this.components[this.components.length-1].showElements();
             }
@@ -1556,14 +1578,20 @@ class Tree {
                 this.components[this.components.length-1].showConnections();
             }
         }
+
+        //log updated tree
+        this.log();
     }
     
     //delete specified components
     delete(components) {
+        //temporarily copy components array so deletion does not affect iteration
         const temp = [];
         for (let i = 0; i < components.length; i++) {
             temp.push(components[i]);
         }
+
+        //delete components
         for (let i = 0; i < temp.length; i++) {
             const c = temp[i];
             const index = this.componentIDs.indexOf(c.ID);
@@ -1575,6 +1603,9 @@ class Tree {
             }
         }
         temp = [];
+
+        //log updated tree
+        this.log();
     }
 
     //show specified components gizmos
@@ -1682,11 +1713,14 @@ class Tree {
             const c = components[i];
             if (c.type == "stem" || c.type == "branch" || c.type == "trunk") {
                 old.push(c);
+
+                //update reflected toggle
                 let newReflected = 1;
                 if (c.reflected == 1) {
                     newReflected = 0;
                 }
                 
+                //create reflected version of component
                 if (c.type == "stem") {
                     this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, c.radFill, 
                         c.radConn, c.lenConn, c.thickBT, newReflected, this.numArcPts, this.numFillPts));
@@ -1698,6 +1732,7 @@ class Tree {
                         c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, newReflected, this.numArcPts));
                 }
 
+                //maintain selections & visuals
                 this.components[this.components.length-1].select();
                 if (c.structureMode) {
                     this.components[this.components.length-1].showElements();
@@ -1710,7 +1745,12 @@ class Tree {
                 }
             }
         }
+
+        //delete non-reflected (old) components
         this.delete(old);
+
+        //log updated tree
+        this.log();
     }
 
     //set the specified components materials opaque
@@ -1872,12 +1912,34 @@ class Tree {
         }
     }
 
-    //undo action (go back to previous tree version)
-    undo() {
+    //log tree version (in history)
+    log() {
         const maxVersions = 10;
+        
+        //add version to history
+        this.history.push(this.compress());
+
+        //remove oldest version if exceeding max versions
+        while (this.history.length > maxVersions) {
+            this.history.shift();
+        }
     }
 
-    //redo action (go back to undone tree version)
+    //undo action (go back to previous tree version in history)
+    undo() {
+        //clear current tree
+        this.delete(this.components);
+
+        if (this.history.length > 1) {
+            //move current tree to future
+            this.future.push(this.history.pop());
+
+            //expand previous tree version
+            this.expand(this.history[this.history.length-1]);
+        }
+    }
+
+    //redo action (go back to undone tree version in future)
     redo() {
 
     }
@@ -1909,6 +1971,9 @@ class Tree {
 
                     //clear previous tree
                     this.delete(this.components.slice(0, num));
+
+                    //log loaded tree
+                    this.log();
                 }
             }
         }
