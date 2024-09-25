@@ -963,11 +963,6 @@ class Stem extends Component {
             const nodeK = new Node(scene, this, "k", [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)]);
             this.elements.push(nodeK);
 
-            //create frames
-            const radFrame = 0.125;
-            this.elements.push(new Frame(scene, this, "ij", nodeI, nodeJ, radFrame, 1, 1, 1, 1)); //TO-DO update properties
-            this.elements.push(new Frame(scene, this, "jk", nodeJ, nodeK, radFrame, 1, 1, 1, 1)); //TO-DO update properties
-
             //bounding boxes
             const rectBB = [
                 new BABYLON.Vector3(-radStem+this.BBOffset/2, 0, -radStem+this.BBOffset/2),
@@ -1085,41 +1080,68 @@ class Stem extends Component {
         this.connections = [femStem, maleStem];
 
         //create branch/trunk connections
-        let spaceRem = lenStem/2-radFill*Math.tan(angleBend*Math.PI/360);
-        let i = 1;
-        while (spaceRem >= thickBT) {
-            femPosi = [(i-1)*thickBT, 0, 0, 0, 0, -90];
-            let femPosii = [i*thickBT, 0, 0];
-            malePosi = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
-            let malePosii = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180)];
-            if (reflected == 1) {
-                femPosi = [(lenStem/2)+(lenStem/2-(i-1)*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-(i-1)*thickBT)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
-                femPosii = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180)];
-                malePosi = [i*thickBT, 0, 0, 0, 0, 90];
-                malePosii = [i*thickBT, 0, 0];
-            }
-            const femBT = new Joint(scene, this, "femBT", femPosi, radStem+offset/2, thickBT, numArcPts);
-            const maleBT = new Joint(scene, this, "maleBT", malePosi, radStem+offset/2, thickBT, numArcPts);
-            
-                //create monitors
-                const fii = BABYLON.MeshBuilder.CreateBox("fii", {size:this.monitorSize});
-                fii.translate(new BABYLON.Vector3(femPosii[0], femPosii[1], femPosii[2]), 1, BABYLON.Space.WORLD);
-                fii.isVisible = false;
-                const mii = BABYLON.MeshBuilder.CreateBox("mii", {size:this.monitorSize});
-                mii.translate(new BABYLON.Vector3(malePosii[0], malePosii[1], malePosii[2]), 1, BABYLON.Space.WORLD);
-                mii.isVisible = false;
 
-                //assign monitors to connections
-                femBT.monitors = [fi, fii];
-                maleBT.monitors = [mi, mii];
+            //initialize variables
+            let spaceRem = lenStem/2-radFill*Math.tan(angleBend*Math.PI/360);
+            let i = 1;
+            let radFrame = 0.125;
+            let nodeIJ = null;
+            let nodeJK = null;
+            let prevIJ = nodeI;
+            let prevJK = nodeK;
+            
+            //add connections
+            while (spaceRem >= thickBT) {
+                femPosi = [(i-1)*thickBT, 0, 0, 0, 0, -90];
+                let femPosii = [i*thickBT, 0, 0];
+                malePosi = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
+                let malePosii = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180)];
+                if (reflected == 1) {
+                    femPosi = [(lenStem/2)+(lenStem/2-(i-1)*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-(i-1)*thickBT)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
+                    femPosii = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180)];
+                    malePosi = [i*thickBT, 0, 0, 0, 0, 90];
+                    malePosii = [i*thickBT, 0, 0];
+                }
+                const femBT = new Joint(scene, this, "femBT", femPosi, radStem+offset/2, thickBT, numArcPts);
+                const maleBT = new Joint(scene, this, "maleBT", malePosi, radStem+offset/2, thickBT, numArcPts);
                 
-            this.connections.push(femBT);
-            this.connections.push(maleBT);
-            mi = mii;
-            fi = fii;
-            spaceRem -= thickBT;
-            i++;
-        }
+                    //create monitors
+                    const fii = BABYLON.MeshBuilder.CreateBox("fii", {size:this.monitorSize});
+                    fii.translate(new BABYLON.Vector3(femPosii[0], femPosii[1], femPosii[2]), 1, BABYLON.Space.WORLD);
+                    fii.isVisible = false;
+                    const mii = BABYLON.MeshBuilder.CreateBox("mii", {size:this.monitorSize});
+                    mii.translate(new BABYLON.Vector3(malePosii[0], malePosii[1], malePosii[2]), 1, BABYLON.Space.WORLD);
+                    mii.isVisible = false;
+
+                    //assign monitors to connections
+                    femBT.monitors = [fi, fii];
+                    maleBT.monitors = [mi, mii];
+
+                    //create nodes
+                    nodeIJ = new Node(scene, this, "ij", [(i-1)*thickBT+thickBT/2, 0, 0]);
+                    this.elements.push(nodeIJ);
+                    nodeJK = new Node(scene, this, "jk", [(lenStem/2)+(lenStem/2-i*thickBT+thickBT/2)*Math.cos(angleBend*Math.PI/180), 0, 
+                        (lenStem/2-i*thickBT+thickBT/2)*Math.sin(angleBend*Math.PI/180)]);
+                    this.elements.push(nodeJK);
+
+                    //create frames
+                    this.elements.push(new Frame(scene, this, "ij", prevIJ, nodeIJ, radFrame, 1, 1, 1, 1)); //TO-DO update properties
+                    this.elements.push(new Frame(scene, this, "jk", prevJK, nodeJK, radFrame, 1, 1, 1, 1)); //TO-DO update properties
+                
+                //update variables
+                this.connections.push(femBT);
+                this.connections.push(maleBT);
+                mi = mii;
+                fi = fii;
+                prevIJ = nodeIJ;
+                prevJK = nodeJK;
+                spaceRem -= thickBT;
+                i++;
+            }
+
+                    //create remaining frames
+                    this.elements.push(new Frame(scene, this, "ij", prevIJ, nodeJ, radFrame, 1, 1, 1, 1)); //TO-DO update properties
+                    this.elements.push(new Frame(scene, this, "jk", prevJK, nodeJ, radFrame, 1, 1, 1, 1)); //TO-DO update properties
 
         //set parents
         this.parentConnections();
@@ -1536,6 +1558,9 @@ class Tree {
         this.showingGizmos = false; //toggle for gizmo visibility
         this.history = []; //array of tree versions for undo
         this.future = []; //array of tree versions for redo
+        this.structureMode = false; //toggle for if structural elements are showing (structural analysis mode)
+        this.showingConnections = false; //toggle for if connections are visible
+        this.transparent = false; //toggle for components transparency
 
         //console for debugging
         if (DEBUG) {
@@ -1575,13 +1600,13 @@ class Tree {
                 }
 
                 //maintain visuals
-                if (c.structureMode) {
+                if (this.structureMode) {
                     this.components[this.components.length-1].showElements();
                 }
-                if (c.transparent) {
+                if (this.transparent) {
                     this.components[this.components.length-1].xray();
                 }
-                if (c.showingConnections) {
+                if (this.showingConnections) {
                     this.components[this.components.length-1].showConnections();
                 }
             }
@@ -1675,6 +1700,7 @@ class Tree {
         for (let i = 0; i < components.length; i++) {
             components[i].showConnections();
         }
+        this.showingConnections = true;
     }
 
     //hide specified components connections
@@ -1682,6 +1708,7 @@ class Tree {
         for (let i = 0; i < components.length; i++) {
             components[i].hideConnections();
         }
+        this.showingConnections = false;
     }
 
     //toggle specified components connections visibility
@@ -1689,6 +1716,7 @@ class Tree {
         for (let i = 0; i < components.length; i++) {
             components[i].toggleConnections();
         }
+        this.showingConnections = !this.showingConnections;
     }
 
     //deselect specified components connections
@@ -1703,6 +1731,7 @@ class Tree {
         for (let i = 0; i < components.length; i++) {
             components[i].toggleElements();
         }
+        this.structureMode = !this.structureMode;
     }
 
     //checks for intersections between specified components
@@ -1758,13 +1787,13 @@ class Tree {
 
                     //maintain selections & visuals
                     this.components[this.components.length-1].select();
-                    if (c.structureMode) {
+                    if (this.structureMode) {
                         this.components[this.components.length-1].showElements();
                     }
-                    if (c.transparent) {
+                    if (this.transparent) {
                         this.components[this.components.length-1].xray();
                     }
-                    if (c.showingConnections) {
+                    if (this.showingConnections) {
                         this.components[this.components.length-1].showConnections();
                     }
                 }
@@ -1785,6 +1814,7 @@ class Tree {
         for (let i = 0; i < components.length; i++) {
             components[i].opaque();
         }
+        this.transparent = false;
     }
 
     //set the specified components materials transparent (xray)
@@ -1792,6 +1822,7 @@ class Tree {
         for (let i = 0; i < components.length; i++) {
             components[i].xray();
         }
+        this.transparent = true;
     }
 
     //toggle specified components transparency
@@ -1799,6 +1830,7 @@ class Tree {
         for (let i = 0; i < components.length; i++) {
             components[i].toggleTransparency();
         }
+        this.transparent = !this.transparent;
     }
 
     //updates specified components visuals
@@ -1927,12 +1959,15 @@ class Tree {
     //expand string lines to tree
     expand(lines) {
         for (let j = 0; j < lines.length; j++) {
+            //process component from string
             let line = lines[j];
             let dataString = line.split(',');
             let data = [dataString[0]];
             for (let i = 1; i < dataString.length; i++) {
                 data.push(parseFloat(dataString[i]));
             }
+
+            //add component
             if (data[0] == "leaf") {
                 this.add(new Leaf(this.scene, this, this.snapDist, this.snapRot, 
                     [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8]));
@@ -1948,12 +1983,23 @@ class Tree {
                     [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], 
                     data[15], data[16], data[17], data[18], this.numArcPts));
             }
+
+            //maintain visuals
+            if (this.structureMode) {
+                this.components[this.components.length-1].showElements();
+            }
+            if (this.transparent) {
+                this.components[this.components.length-1].xray();
+            }
+            if (this.showingConnections) {
+                this.components[this.components.length-1].showConnections();
+            }
         }
     }
 
     //log tree version (in history)
     log() {
-        const maxVersions = 10;
+        const maxVersions = 20;
 
         //add version to history
         this.history.push(this.compress());
@@ -2053,7 +2099,7 @@ const createScene = async function () {
     scene.clearColor = new BABYLON.Color4(1, 1, 1, 1);
 
     //console for debugging
-    const DEBUG = true;
+    const DEBUG = false;
     if (DEBUG) {
         await new Promise(resolve => {
             var s = document.createElement("script");
@@ -2099,7 +2145,7 @@ const createScene = async function () {
         light.direction = camera.position;
     })
 
-	//input properties
+	//input component properties (if not loading from file)
     const lenX = 6; //leaf length in x-dir
     const lenY = 4; //leaf length in y-dir
 
@@ -2128,6 +2174,7 @@ const createScene = async function () {
     const edgeRib = thickBranch; //tile side edge distance before first rib (if not reflected)
     const overhang = 1; //tile end edge distance overhanging rib end
 
+    //input tree properties
     const snapDist = 1; //snap distance for gizmo controls
     const snapRot = 15; //snap rotation angle (in degrees) for gizmo controls
     const numArcPts = 64; //# of points defining circle arc resolution
