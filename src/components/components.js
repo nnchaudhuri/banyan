@@ -746,6 +746,10 @@ class Component {
     setupVisuals() {
         //initialize mesh material
         this.mesh.material = this.defMat;
+        if (this.type == "stem") {
+            this.femNut.material = this.defMat;
+            this.maleNut.material = this.defMat;
+        }
         
         //create edges
         this.mesh.enableEdgesRendering();
