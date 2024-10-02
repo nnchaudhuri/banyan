@@ -92,7 +92,7 @@ class Node extends Element {
         this.z = z; //node z coordinate
 
         //create mesh
-        this.mesh = BABYLON.MeshBuilder.CreateSphere("node", {diameter:0.75, segments:component.tree.numArcPts});
+        this.mesh = BABYLON.MeshBuilder.CreateSphere("node", {diameter:0.75, segments:component.collection.numArcPts});
         this.mesh.position.x += x;
         this.mesh.position.y += y;
         this.mesh.position.z += z;
@@ -122,7 +122,7 @@ class Frame extends Element {
 
         //create mesh
         const path = [new BABYLON.Vector3(nodeI.x, nodeI.y, nodeI.z), new BABYLON.Vector3(nodeJ.x, nodeJ.y, nodeJ.z)];
-        this.mesh = BABYLON.MeshBuilder.CreateTube("frame", {path:path, radius:radMesh, tessellation:component.tree.numArcPts, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        this.mesh = BABYLON.MeshBuilder.CreateTube("frame", {path:path, radius:radMesh, tessellation:component.collection.numArcPts, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         //set up visuals & controls
         this.setupVisuals();
@@ -416,10 +416,10 @@ class Slot extends Connection {
 
 //define component class
 class Component {
-    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]) {
+    constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]) {
         //initialize properties
         this.scene = scene; //scene hosting component
-        this.tree = tree; //tree the component is a part of
+        this.collection = collection; //collection the component is a part of
         this.ID = null; //initialize null component ID
         this.x = 0; //x position (of local origin), initialize to 0 as specific components set starting position & rotation
         this.y = 0; //y position (of local origin), initialize to 0 as specific components set starting position & rotation
@@ -548,15 +548,15 @@ class Component {
     select() {
         //update properties
         this.selected = true;
-        const index = this.tree.selComponentIDs.indexOf(this.ID);
-        if (index < 0) {
-            this.tree.selComponents.push(this);
-            this.tree.selComponentIDs.push(this.ID);
-        }
+        if (this.collection.type == "tree") {
+            const index = this.collection.selComponentIDs.indexOf(this.ID);
+            if (index < 0) {
+                this.collection.selComponents.push(this);
+                this.collection.selComponentIDs.push(this.ID);
+            }
 
-        //show gizmos
-        if (this.tree.showingGizmos) {
-            this.showGizmos();
+            //show gizmos
+            if (this.collection.showingGizmos) {this.showGizmos()};
         }
     }
 
@@ -564,15 +564,17 @@ class Component {
     deselect() {
         //update properties
         this.selected = false;
-        const index = this.tree.selComponentIDs.indexOf(this.ID);
-        if (index > -1) {
-            this.tree.selComponentIDs.splice(index, 1);
-            this.tree.selComponents.splice(index, 1);
-        }
+        if (this.collection.type == "tree") {
+            const index = this.collection.selComponentIDs.indexOf(this.ID);
+            if (index > -1) {
+                this.collection.selComponentIDs.splice(index, 1);
+                this.collection.selComponents.splice(index, 1);
+            }
 
-        //hide gizmos
-        this.hideGizmos();
-        if (this.tree.selComponents.length < 1) {this.tree.showingGizmos = false};
+            //hide gizmos
+            this.hideGizmos();
+            if (this.collection.selComponents.length < 1) {this.collection.showingGizmos = false};
+        }
     }
 
     //manage component selection
@@ -709,6 +711,10 @@ class Component {
         this.selMat.alpha = 1;
         this.intMat.alpha = 1;
         this.mesh.material.alpha = 1;
+        if (this.type == "stem") {
+            this.femNut.material.alpha = 1;
+            this.maleNut.material.alpha = 1;
+        }
         this.transparent = false;
     }
 
@@ -720,6 +726,10 @@ class Component {
         this.selMat.alpha = alpha;
         this.intMat.alpha = alpha;
         this.mesh.material.alpha = alpha;
+        if (this.type == "stem") {
+            this.femNut.material.alpha = alpha;
+            this.maleNut.material.alpha = alpha;
+        }
         this.transparent = true;
     }
 
@@ -753,27 +763,58 @@ class Component {
 
     //updates component visuals
     updateVisuals() {
+        //materials
         if (this.selected) {
             this.mesh.material = this.selMat;
             for (let i = 0; i < this.elements.length; i++) {
                 this.elements[i].mesh.material = this.selMat;
             }
+            if (this.type == "stem") {
+                this.femNut.material = this.selMat;
+                this.maleNut.material = this.selMat;
+            }
         } else if (this.hovering) {
             this.mesh.material = this.hovMat;
+            if (this.type == "stem") {
+                this.femNut.material = this.hovMat;
+                this.maleNut.material = this.hovMat;
+            }
         } else if (this.intersecting) {
             this.mesh.material = this.intMat;
             for (let i = 0; i < this.elements.length; i++) {
                 this.elements[i].mesh.material = this.intMat;
+            }
+            if (this.type == "stem") {
+                this.femNut.material = this.intMat;
+                this.maleNut.material = this.intMat;
             }
         } else {
             this.mesh.material = this.defMat;
             for (let i = 0; i < this.elements.length; i++) {
                 this.elements[i].mesh.material = this.defMat;
             }
+            if (this.type == "stem") {
+                this.femNut.material = this.defMat;
+                this.maleNut.material = this.defMat;
+            }
         }
 
+        //connections
         for (let i = 0; i < this.connections.length; i++) {
             this.connections[i].updateVisuals();
+        }
+
+        //nuts (for stems)
+        if (this.type == "stem") {
+            this.femNut.isVisible = true;
+            this.maleNut.isVisible = true;
+            if (this.showingConnections || this.structureMode) {
+                this.femNut.isVisible = false;
+                this.maleNut.isVisible = false;
+            } else {
+                if (this.connections[0].connectedTo != null) {this.femNut.isVisible = false};
+                if (this.connections[1].connectedTo != null) {this.maleNut.isVisible = false};
+            }
         }
     }
 
@@ -806,27 +847,27 @@ class Component {
         //update component position & rotation properties per gizmo events FIX!
         this.dxGizmo.onSnapObservable.add(event => {
             this.x += event.snapDistance;
-            this.tree.log();
+            if (this.collection.type == "tree") {this.collection.log()};
         });
         this.dyGizmo.onSnapObservable.add(event => {
             this.y += event.snapDistance;
-            this.tree.log();
+            if (this.collection.type == "tree") {this.collection.log()};
         });
         this.dzGizmo.onSnapObservable.add(event => {
             this.z += event.snapDistance;
-            this.tree.log();
+            if (this.collection.type == "tree") {this.collection.log()};
         });
         this.rxGizmo.onSnapObservable.add(event => {
             this.ax += Math.round(event.snapDistance*180/Math.PI);
-            this.tree.log();
+            if (this.collection.type == "tree") {this.collection.log()};
         });
         this.ryGizmo.onSnapObservable.add(event => {
             this.ay += Math.round(event.snapDistance*180/Math.PI);
-            this.tree.log();
+            if (this.collection.type == "tree") {this.collection.log()};
         });
         this.rzGizmo.onSnapObservable.add(event => {
             this.az += Math.round(event.snapDistance*180/Math.PI);
-            this.tree.log();
+            if (this.collection.type == "tree") {this.collection.log()};
         });
 
         //hover over component
@@ -840,8 +881,8 @@ class Component {
 
 //define leaf class (fabric elements)
 class Leaf extends Component {
-    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], lenX, lenY) {
-        super(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]);
+    constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], lenX, lenY) {
+        super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
         this.type = "leaf"; //component type
@@ -851,7 +892,7 @@ class Leaf extends Component {
         //create mesh
         this.mesh = BABYLON.MeshBuilder.CreatePlane("leaf", {height:lenY, width:lenX, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(-Math.PI/2, 0, 0); //rotate to default orientation
-
+        
             //create nodes
             const nodeI = new Node(scene, this, "i", [-lenX/2, lenY/2, 0]);
             this.elements.push(nodeI);
@@ -861,10 +902,10 @@ class Leaf extends Component {
             this.elements.push(nodeK);
             const nodeL = new Node(scene, this, "l", [-lenX/2, -lenY/2, 0]);
             this.elements.push(nodeL);
-
+            
             //create area
             this.elements.push(new Area(scene, this, "ijkl", nodeI, nodeJ, nodeK, nodeL, 0.05));
-
+            
         //create connections
         const right = new Edge(scene, this, "right", [lenX/2, 0, 0, 0, 0, 0], lenY);
         const top = new Edge(scene, this, "top", [0, lenY/2, 0, 0, 0, 90], lenX);
@@ -925,9 +966,9 @@ class Leaf extends Component {
 
 //define stem class (rods for connections or as frames)
 class Stem extends Component {
-    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], angleBend, lenStem, radStem, radFill, radConn, lenConn, thickBT, reflected, numArcPts, numFillPts) {
-        super(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]);
-
+    constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], angleBend, lenStem, radStem, radFill, radConn, lenConn, thickBT, reflected, numArcPts, numFillPts) {
+        super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
+        
         //initialize properties
         this.type = "stem"; //component type
         this.angleBend = angleBend; //stem bend angle (in degrees)
@@ -936,7 +977,7 @@ class Stem extends Component {
         this.radFill = radFill; //fillet radius of stem bend
         this.radConn = radConn; //radius of connection
         this.lenConn = lenConn; //length of connection
-        this.thickBT = thickBT; //thickness of branches & trunk ribs in the tree
+        this.thickBT = thickBT; //thickness of branches & trunk ribs in the collection
         this.reflected = reflected; //toggle for if stem is reflected along longitudinal axis
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
         this.numFillPts = numFillPts; //# of points defining fillet arc resolution
@@ -1048,11 +1089,13 @@ class Stem extends Component {
         const offset = 0.005;
         let femPosi = [0, 0, 0, 0, 0, -90];
         let femPoso = [lenConn, 0, 0];
+        let femPosn = [-lenConn, 0, 0];
         let malePosi = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
         let malePoso = [(lenStem/2)+(lenStem/2+lenConn)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180)];
         if (reflected == 1) {
             femPosi = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
             femPoso = [(lenStem/2)+(lenStem/2-lenConn)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-lenConn)*Math.sin(angleBend*Math.PI/180)];
+            femPosn = [(lenStem/2)+(lenStem/2+lenConn)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180)];
             malePosi = [0, 0, 0, 0, 0, 90];
             malePoso = [-lenConn, 0, 0];
         }
@@ -1079,6 +1122,28 @@ class Stem extends Component {
         
         this.connections = [femStem, maleStem];
 
+            //create nuts
+            const radNut = 0.375;
+            const femNutCapPath = [
+                new BABYLON.Vector3(femPosi[0], femPosi[1], femPosi[2]),
+                new BABYLON.Vector3(femPosn[0], femPosn[1], femPosn[2])
+            ];
+            const femNutCap = BABYLON.MeshBuilder.CreateTube("femNutCap", {path:femNutCapPath, radius:radNut, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
+                sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+            const femNutConnPath = [
+                new BABYLON.Vector3(femPosi[0], femPosi[1], femPosi[2]),
+                new BABYLON.Vector3(femPoso[0], femPoso[1], femPoso[2])
+            ];
+            const femNutConn = BABYLON.MeshBuilder.CreateTube("femNutConn", {path:femNutConnPath, radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
+                sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+            this.femNut = BABYLON.Mesh.MergeMeshes([femNutCap, femNutConn], true, true, undefined, false, false);
+            const maleNutPath = [
+                new BABYLON.Vector3(malePosi[0], malePosi[1], malePosi[2]),
+                new BABYLON.Vector3(malePoso[0], malePoso[1], malePoso[2])
+            ];
+            this.maleNut = BABYLON.MeshBuilder.CreateTube("maleNut", {path:maleNutPath, radius:radNut, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
+                sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+            
         //create branch/trunk connections
 
             //initialize variables
@@ -1145,6 +1210,8 @@ class Stem extends Component {
 
         //set parents
         this.parentConnections();
+            this.femNut.parent = this.mesh;
+            this.maleNut.parent = this.mesh;
         this.parentBB();
         this.parentElements();
 
@@ -1163,8 +1230,8 @@ class Stem extends Component {
 
 //define branch class (frame members with holes & slots)
 class Branch extends Component {
-    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, reflected, numArcPts) {
-        super(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]);
+    constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, reflected, numArcPts) {
+        super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
         this.type = "branch"; //component type
@@ -1347,8 +1414,8 @@ class Branch extends Component {
 
 //define trunk class (plank tiles with holed ribs)
 class Trunk extends Component {
-    constructor(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, reflected, numArcPts) {
-        super(scene, tree, snapDist, snapRot, [x, y, z, ax, ay, az]);
+    constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, reflected, numArcPts) {
+        super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         //initialize properties
         this.type = "trunk"; //component type
@@ -1540,27 +1607,107 @@ class Trunk extends Component {
     }
 }
 
-//define tree class (group of components --> furniture)
-class Tree {
-    constructor(scene, snapDist, snapRot, numArcPts, numFillPts, DEBUG, c3) {
+//define collection class (group of components)
+class Collection {
+    constructor(scene, numArcPts, numFillPts) {
 
         //initialize properties
-        this.scene = scene; //scene hosting tree
-        this.components = []; //array of components in tree
+        this.scene = scene; //scene hosting collection
+        this.components = []; //array of components in collection
+        this.numArcPts = numArcPts; //# of points defining circle arc resolution
+        this.numFillPts = numFillPts; //# of points defining fillet arc resolution
+        this.structureMode = false; //toggle for if structural elements are showing (structural analysis mode)
+        this.showingConnections = false; //toggle for if connections are visible
+        this.transparent = false; //toggle for components transparency
+    }
+
+    //select specified components
+    select(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].select();
+        }
+    }
+
+    //deselect specified components
+    deselect(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].deselect();
+        }
+    }
+
+    //show specified components connections
+    showConnections(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].showConnections();
+        }
+        this.showingConnections = true;
+    }
+
+    //hide specified components connections
+    hideConnections(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].hideConnections();
+        }
+        this.showingConnections = false;
+    }
+
+    //toggle specified components connections visibility
+    toggleConnections(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].toggleConnections();
+        }
+        this.showingConnections = !this.showingConnections;
+    }
+
+    //toggle specified components structural elements visibility
+    toggleElements(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].toggleElements();
+        }
+        this.structureMode = !this.structureMode;
+    }
+
+    //set the specified components materials opaque
+    opaque(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].opaque();
+        }
+        this.transparent = false;
+    }
+
+    //set the specified components materials transparent (xray)
+    xray(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].xray();
+        }
+        this.transparent = true;
+    }
+
+    //toggle specified components transparency
+    toggleTransparency(components) {
+        for (let i = 0; i < components.length; i++) {
+            components[i].toggleTransparency();
+        }
+        this.transparent = !this.transparent;
+    }
+}
+
+//define tree class (arrangement of components for furniture design)
+class Tree extends Collection {
+    constructor(scene, numArcPts, numFillPts, snapDist, snapRot, DEBUG, c3) {
+        super(scene, numArcPts, numFillPts);
+
+        //initialize properties
+        this.type = "tree"; //collection type
         this.componentIDs = []; //array of component IDs in tree
         this.nextID = 1; //initialize next component ID val
         this.selComponents = []; //array of selected components in tree
         this.selComponentIDs = []; //array of selected component IDs in tree
         this.snapDist = snapDist; //snap distance for gizmo controls
         this.snapRot = snapRot; //snap rotation angle (in degrees) for gizmo controls
-        this.numArcPts = numArcPts; //# of points defining circle arc resolution
-        this.numFillPts = numFillPts; //# of points defining fillet arc resolution
         this.showingGizmos = false; //toggle for gizmo visibility
         this.history = []; //array of tree versions for undo
         this.future = []; //array of tree versions for redo
-        this.structureMode = false; //toggle for if structural elements are showing (structural analysis mode)
-        this.showingConnections = false; //toggle for if connections are visible
-        this.transparent = false; //toggle for components transparency
 
         //console for debugging
         if (DEBUG) {
@@ -1681,57 +1828,11 @@ class Tree {
         }
     }
 
-    //select specified components
-    select(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].select();
-        }
-    }
-
-    //deselect specified components
-    deselect(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].deselect();
-        }
-    }
-
-    //show specified components connections
-    showConnections(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].showConnections();
-        }
-        this.showingConnections = true;
-    }
-
-    //hide specified components connections
-    hideConnections(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].hideConnections();
-        }
-        this.showingConnections = false;
-    }
-
-    //toggle specified components connections visibility
-    toggleConnections(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].toggleConnections();
-        }
-        this.showingConnections = !this.showingConnections;
-    }
-
     //deselect specified components connections
     deselectConnections(components) {
         for (let i = 0; i < components.length; i++) {
             components[i].deselectConnections();
         }
-    }
-
-    //toggle specified components structural elements visibility
-    toggleElements(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].toggleElements();
-        }
-        this.structureMode = !this.structureMode;
     }
 
     //checks for intersections between specified components
@@ -1807,30 +1908,6 @@ class Tree {
 
         //log updated tree
         this.log();
-    }
-
-    //set the specified components materials opaque
-    opaque(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].opaque();
-        }
-        this.transparent = false;
-    }
-
-    //set the specified components materials transparent (xray)
-    xray(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].xray();
-        }
-        this.transparent = true;
-    }
-
-    //toggle specified components transparency
-    toggleTransparency(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].toggleTransparency();
-        }
-        this.transparent = !this.transparent;
     }
 
     //updates specified components visuals
@@ -1966,7 +2043,7 @@ class Tree {
             for (let i = 1; i < dataString.length; i++) {
                 data.push(parseFloat(dataString[i]));
             }
-
+            
             //add component
             if (data[0] == "leaf") {
                 this.add(new Leaf(this.scene, this, this.snapDist, this.snapRot, 
@@ -1983,7 +2060,7 @@ class Tree {
                     [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], 
                     data[15], data[16], data[17], data[18], this.numArcPts));
             }
-
+            
             //maintain visuals
             if (this.structureMode) {
                 this.components[this.components.length-1].showElements();
@@ -2091,6 +2168,18 @@ class Tree {
     }
 }
 
+//define almanac class (library of components for browsing & use in trees)
+class Almanac extends Collection {
+    constructor(scene, numArcPts, numFillPts) {
+        super(scene, numArcPts, numFillPts);
+
+        //initialize properties
+        this.type = "almanac"; //collection type
+
+
+    }
+}
+
 //create scene
 const createScene = async function () {
 
@@ -2181,7 +2270,7 @@ const createScene = async function () {
     const numFillPts = 32; //# of points defining fillet arc resolution
 
     //create test tree
-    let tree = new Tree(scene, snapDist, snapRot, numArcPts, numFillPts, DEBUG, c3);
+    let tree = new Tree(scene, numArcPts, numFillPts, snapDist, snapRot, DEBUG, c3);
     tree.load();
 
     //component render updates
