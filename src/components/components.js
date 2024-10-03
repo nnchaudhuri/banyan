@@ -1318,7 +1318,7 @@ class Branch extends Component {
                 tempLengths.push(lenSlot);
                 spacRem -= (lenSlot+spacHole);
             }
-            tempLengths.push(spacRem);
+            if (spacRem >= 0) {tempLengths.push(spacRem)};
             let lengths = tempLengths;
             if (reflected == 1) {
                 lengths = tempLengths.reverse();
@@ -2232,13 +2232,58 @@ class Almanac extends Collection {
     }
 
     //generate branches in almanac per input criteria
-    generateBranches() {
-        
+    generateBranches([x0, y0, z0], [lenBranchMin, lenBranchIncr, lenBranchMax], thickBranch, radBranch, radHole, spacHole, lenSlot) {
+        //initialize position variables
+        let x = x0;
+        let y = y0;
+        let z = z0;
+        const dx = 0;
+        const dy = 2;
+        const dz = 0;
+
+        //generate branches
+        for (let lenBranch = lenBranchMin; lenBranch <= lenBranchMax; lenBranch += lenBranchIncr) {
+            this.branches.push(new Branch(this.scene, this, 0, 0, [x, y, z, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, 0, this.numArcPts));
+            y += 2*radBranch+dy;
+        }
     }
 
     //generate trunks in almanac per input criteria
-    generateTrunks() {
-        
+    generateTrunks([x0, y0, z0], [widthTileMin, widthTileIncr, widthTileMax], [lenTrunkMin, lenTrunkIncr, lenTrunkMax], thickTile, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang) {
+        //initialize position variables
+        let x = x0;
+        let y = y0;
+        let z = z0;
+        const dx = 2;
+        const dy = 2;
+        const dz = 0;
+
+        //generate trunks
+        for (let widthTile = widthTileMin; widthTile <= widthTileMax; widthTile += widthTileIncr) {
+            const numRibs = Math.floor((widthTile-edgeRib-thickRib)/(thickRib+spacRib))+1;
+            for (let lenTrunk = lenTrunkMin; lenTrunk <= lenTrunkMax; lenTrunk += lenTrunkIncr) {
+                this.trunks.push(new Trunk(this.scene, this, 0, 0, [x, y, z, 0, 0, 0], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, 
+                    radHole, spacHole, overhang, 0, this.numArcPts));
+                x += lenTrunk+2*(2*radRib+overhang)+dx;
+            }
+            x = x0;
+            y += 2*radRib+thickTile+dy;
+        }
+    }
+
+    //delete specified components
+    delete(components) {
+        for (let i = components.length-1; i >= 0; i--) {
+            components[i].delete();
+        }
+    }
+
+    //delete all components in almanac
+    deleteAll() {
+        this.delete(this.leaves);
+        this.delete(this.stems);
+        this.delete(this.branches);
+        this.delete(this.trunks);
     }
 
     //updates all component visuals
@@ -2385,7 +2430,7 @@ const createScene = async function () {
     const numArcPts = 64; //# of points defining circle arc resolution
     const numFillPts = 32; //# of points defining fillet arc resolution
 
-    /*
+    ///*
     //create test tree
     let tree = new Tree(scene, numArcPts, numFillPts, snapDist, snapRot, DEBUG, c3);
     tree.load();
@@ -2396,19 +2441,21 @@ const createScene = async function () {
         tree.checkConnections(tree.components);
         tree.updateVisuals(tree.components);
     });
-    */
+    //*/
 
-    ///*
+    /*
     //creat test almanac
     let almanac = new Almanac(scene, numArcPts, numFillPts);
     //almanac.generateLeaves([0, 0, 0], [2, 2, 12], [2, 2, 12]);
-    almanac.generateStems([0, 0, 0], [0, 45, 90], [2, 2, 8], radStem, radFill, radConn, lenConn, thickBranch);
+    //almanac.generateStems([0, 0, 0], [0, 45, 90], [2, 2, 8], radStem, radFill, radConn, lenConn, thickBranch);
+    //almanac.generateBranches([0, 0, 0], [2, 2, 30], thickBranch, radBranch, radHole, spacHole, lenSlot);
+    //almanac.generateTrunks([0, 0, 0], [3, 1, 6], [6, 2, 18], thickTile, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang);
 
     //component render updates
     scene.registerBeforeRender(function() {
         almanac.updateVisuals();
     });
-    //*/
+    */
 
 	return scene;
 }
