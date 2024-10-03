@@ -812,7 +812,7 @@ class Component {
         if (this.type == "stem") {
             this.femNut.isVisible = true;
             this.maleNut.isVisible = true;
-            if (this.showingConnections || this.structureMode) {
+            if (this.collection.type == "almanac" || this.showingConnections || this.structureMode) {
                 this.femNut.isVisible = false;
                 this.maleNut.isVisible = false;
             } else {
@@ -1617,7 +1617,6 @@ class Collection {
 
         //initialize properties
         this.scene = scene; //scene hosting collection
-        this.components = []; //array of components in collection
         this.numArcPts = numArcPts; //# of points defining circle arc resolution
         this.numFillPts = numFillPts; //# of points defining fillet arc resolution
         this.structureMode = false; //toggle for if structural elements are showing (structural analysis mode)
@@ -1703,6 +1702,7 @@ class Tree extends Collection {
 
         //initialize properties
         this.type = "tree"; //collection type
+        this.components = []; //array of components in tree
         this.componentIDs = []; //array of component IDs in tree
         this.nextID = 1; //initialize next component ID val
         this.selComponents = []; //array of selected components in tree
@@ -2179,8 +2179,120 @@ class Almanac extends Collection {
 
         //initialize properties
         this.type = "almanac"; //collection type
+        this.leaves = []; //array of leaf components in almanac
+        this.stems = []; //array of stem components in almanac
+        this.branches = []; //array of branch components in almanac
+        this.trunks = []; //array of trunk components in almanac
 
+        //set up controls
+        this.setupControls();
+    }
 
+    //generate leaves in almanac per input criteria
+    generateLeaves([x0, y0, z0], [lenXMin, lenXIncr, lenXMax], [lenYMin, lenYIncr, lenYMax]) {
+        //initialize position variables
+        let x = x0;
+        let y = y0;
+        let z = z0;
+        const dx = 2;
+        const dy = 0;
+        const dz = 2;
+
+        //generate leaves
+        for (let lenX = lenXMin; lenX <= lenXMax; lenX += lenXIncr) {
+            for (let lenY = lenYMin; lenY <= lenYMax; lenY += lenYIncr) {
+                this.leaves.push(new Leaf(this.scene, this, 0, 0, [x, y, z, 0, 0, 0], lenX, lenY));
+                z += lenY+dz;
+            }
+            z = z0;
+            x += lenX+dx;
+        }   
+    }
+
+    //generate stems in almanac per input criteria
+    generateStems([x0, y0, z0], [angleBendMin, angleBendIncr, angleBendMax], [lenStemMin, lenStemIncr, lenStemMax], radStem, radFill, radConn, lenConn, thickBT) {
+        //initialize position variables
+        let x = x0;
+        let y = y0;
+        let z = z0;
+        const dx = 0;
+        const dy = 2;
+        const dz = 2;
+        
+        //generate stems
+        for (let angleBend = angleBendMin; angleBend <= angleBendMax; angleBend += angleBendIncr) {
+            for (let lenStem = lenStemMin; lenStem <= lenStemMax; lenStem += lenStemIncr) {
+                this.stems.push(new Stem(this.scene, this, 0, 0, [x, y, z, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, thickBT, 0, 
+                    this.numArcPts, this.numFillPts));
+                z += lenStem+dz;
+            }
+            z = z0;
+            y += lenStemMax/2+dy;
+        }   
+    }
+
+    //generate branches in almanac per input criteria
+    generateBranches() {
+        
+    }
+
+    //generate trunks in almanac per input criteria
+    generateTrunks() {
+        
+    }
+
+    //updates all component visuals
+    updateVisuals() {
+        for (let i = 0; i < this.leaves.length; i++) {
+            this.leaves[i].updateVisuals();
+        }
+        for (let i = 0; i < this.stems.length; i++) {
+            this.stems[i].updateVisuals();
+        }
+        for (let i = 0; i < this.branches.length; i++) {
+            this.branches[i].updateVisuals();
+        }
+        for (let i = 0; i < this.trunks.length; i++) {
+            this.trunks[i].updateVisuals();
+        }
+    }
+
+    //set up almanac controls & responses
+    setupControls() {
+        //keyboard controls
+        this.scene.onKeyboardObservable.add((kbInfo) => {
+            switch (kbInfo.type) {
+                case BABYLON.KeyboardEventTypes.KEYDOWN:
+                    switch (kbInfo.event.key) {
+                        //t key toggles transparency for all components
+                        case "t":
+                        case "T":
+                            this.toggleTransparency(this.leaves);
+                            this.toggleTransparency(this.stems);
+                            this.toggleTransparency(this.branches);
+                            this.toggleTransparency(this.trunks);
+                        break
+
+                        //q key toggles structural elements visibility for all components
+                        case "q":
+                        case "Q":
+                            this.toggleElements(this.leaves);
+                            this.toggleElements(this.stems);
+                            this.toggleElements(this.branches);
+                            this.toggleElements(this.trunks);
+                        break
+
+                        //escape key deselects all components
+                        case "Escape":
+                            this.deselect(this.leaves);
+                            this.deselect(this.stems);
+                            this.deselect(this.branches);
+                            this.deselect(this.trunks);
+                        break
+                    }
+                break;
+            }
+        });
     }
 }
 
@@ -2273,6 +2385,7 @@ const createScene = async function () {
     const numArcPts = 64; //# of points defining circle arc resolution
     const numFillPts = 32; //# of points defining fillet arc resolution
 
+    /*
     //create test tree
     let tree = new Tree(scene, numArcPts, numFillPts, snapDist, snapRot, DEBUG, c3);
     tree.load();
@@ -2283,6 +2396,19 @@ const createScene = async function () {
         tree.checkConnections(tree.components);
         tree.updateVisuals(tree.components);
     });
+    */
+
+    ///*
+    //creat test almanac
+    let almanac = new Almanac(scene, numArcPts, numFillPts);
+    //almanac.generateLeaves([0, 0, 0], [2, 2, 12], [2, 2, 12]);
+    almanac.generateStems([0, 0, 0], [0, 45, 90], [2, 2, 8], radStem, radFill, radConn, lenConn, thickBranch);
+
+    //component render updates
+    scene.registerBeforeRender(function() {
+        almanac.updateVisuals();
+    });
+    //*/
 
 	return scene;
 }
