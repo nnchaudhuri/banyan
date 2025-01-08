@@ -1,2 +1,2 @@
 # banyan
-Website for modular furniture design.
+Modular furniture design
