@@ -79,18 +79,25 @@ const Scene = () => {
     */
 
     // General interface properties
-    const snapDist = 1; // snap distance for gizmo controls
-    const snapRot = 15; // snap rotation angle (in degrees) for gizmo controls
+    const snapDist = 1; // Snap distance for gizmo controls
+    const snapRot = 15; // Snap rotation angle (in degrees) for gizmo controls
     const numArcPts = 64; // # of points defining circle arc resolution
     const numFillPts = 32; // # of points defining fillet arc resolution
 
-    // Create test tree (press 'l' key to load tree from file)
+    // Create test tree
     let tree = new Components.Tree(scene, numArcPts, numFillPts, snapDist, snapRot);
     scene.registerBeforeRender(function() {
         tree.checkIntersections(tree.components);
         tree.checkConnections(tree.components);
         tree.updateVisuals(tree.components);
     });
+
+    // Load tree from file if button clicked
+    const handleLoadFile = () => {
+      tree.load();
+    };
+
+    window.addEventListener('loadFile', handleLoadFile);
 
     /*
     // Create test almanac
@@ -116,6 +123,7 @@ const Scene = () => {
 
     return () => {
       engine.dispose();
+      window.removeEventListener('loadFile', handleLoadFile);
     };
   }, []);
 
