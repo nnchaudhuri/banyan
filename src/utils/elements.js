@@ -11,17 +11,17 @@ class Element {
         this.mesh = null; // Initialize null mesh
 
         // Default material
-        this.defMat = new BABYLON.StandardMaterial("defMat", scene);
+        this.defMat = new BABYLON.StandardMaterial('defMat', scene);
         this.defCol = new BABYLON.Color3(1, 1, 1);
         this.defMat.diffuseColor = this.defCol;
 
         // Selected material
-        this.selMat = new BABYLON.StandardMaterial("selMat", scene);
+        this.selMat = new BABYLON.StandardMaterial('selMat', scene);
         this.selCol = new BABYLON.Color3(0, 1, 0);
         this.selMat.diffuseColor = this.selCol;
 
         // Intersected material
-        this.intMat = new BABYLON.StandardMaterial("intMat", scene);
+        this.intMat = new BABYLON.StandardMaterial('intMat', scene);
         this.intCol = new BABYLON.Color3(1, 0, 0);
         this.intMat.diffuseColor = this.intCol;
     }
@@ -73,7 +73,7 @@ class Node extends Element {
         this.z = z; // Node z coordinate
 
         // Create mesh
-        this.mesh = BABYLON.MeshBuilder.CreateSphere("node", {diameter:0.75, segments:component.collection.numArcPts});
+        this.mesh = BABYLON.MeshBuilder.CreateSphere('node', {diameter:0.75, segments:component.collection.numArcPts});
         this.mesh.position.x += x;
         this.mesh.position.y += y;
         this.mesh.position.z += z;
@@ -101,7 +101,7 @@ class Frame extends Element {
 
         // Create mesh
         const path = [new BABYLON.Vector3(nodeI.x, nodeI.y, nodeI.z), new BABYLON.Vector3(nodeJ.x, nodeJ.y, nodeJ.z)];
-        this.mesh = BABYLON.MeshBuilder.CreateTube("frame", {path:path, radius:radMesh, tessellation:component.collection.numArcPts, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        this.mesh = BABYLON.MeshBuilder.CreateTube('frame', {path:path, radius:radMesh, tessellation:component.collection.numArcPts, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         // Set up visuals & controls
         this.setupVisuals();
@@ -133,7 +133,7 @@ class Area extends Element {
             new BABYLON.Vector3(nodeK.x, 0, nodeK.y),
             new BABYLON.Vector3(nodeL.x, 0, nodeL.y)
         ];
-        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("area", {shape:rect, 
+        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon('area', {shape:rect, 
             depth:thickMesh, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
         this.mesh.addRotation(Math.PI/2, 0, 0);

@@ -15,7 +15,7 @@ const Scene = () => {
     scene.clearColor = new BABYLON.Color4(1, 1, 1, 1);
 
     // Setup orthogonal camera
-    const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI/4, Math.PI/4, 100, 
+    const camera = new BABYLON.ArcRotateCamera('camera', -Math.PI/4, Math.PI/4, 100, 
       BABYLON.Vector3.Zero());
     camera.attachControl(canvas, true);
     camera.inputs.attached.keyboard.angularSpeed = 0.005;
@@ -43,7 +43,7 @@ const Scene = () => {
     });
 
     // Setup light
-    const light = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 50, 0));
+    const light = new BABYLON.HemisphericLight('hemiLight', new BABYLON.Vector3(0, 50, 0));
     scene.registerBeforeRender(function () {
         light.direction = camera.position;
     });
@@ -93,12 +93,43 @@ const Scene = () => {
         tree.updateVisuals(tree.components);
     });
 
-    // Load tree from file if button clicked
-    const handleLoadFile = () => {
-      tree.load();
+    /*
+    // Load example tree from file by default
+    const defaultLoadFile = () => {
+      try {
+        const response = fetch('../assets/myTree.txt');
+        const fileContent = response.text();
+        
+        // Create components per file lines
+        const lines = fileContent.split('\n');
+        tree.expand(lines);
+      } catch (error) {
+        console.error('Failed to load tree from file:', error);
+      }
+    };
+    defaultLoadFile();
+    */
+
+    // Action handlers
+    const actionHandlers = {
+      loadFile: () => tree.load(),
+      saveFile: () => tree.save(),
+      undo: () => tree.undo(),
+      redo: () => tree.redo(),
+      selectAll: () => tree.selectAll(),
+      deselectAll: () => tree.deselectAll(),
+      copy: () => tree.copySelected(),
+      delete: () => tree.deleteSelected(),
+      move: () => tree.toggleGizmosSelected(),
+      reflect: () => tree.reflectSelected(),
+      connections: () => tree.toggleAllConnections(),
+      transparency: () => tree.toggleAllTransparency(),
     };
 
-    window.addEventListener('loadFile', handleLoadFile);
+    // Event listeners for actions
+    Object.keys(actionHandlers).forEach(action => {
+      window.addEventListener(action, actionHandlers[action]);
+    });
 
     // Render loop
     engine.runRenderLoop(() => {
@@ -112,11 +143,16 @@ const Scene = () => {
 
     return () => {
       engine.dispose();
-      window.removeEventListener('loadFile', handleLoadFile);
+      Object.keys(actionHandlers).forEach(action => {
+        window.removeEventListener(action, actionHandlers[action]);
+      });
+      window.removeEventListener('resize', () => {
+        engine.resize();
+      });
     };
   }, []);
 
-  return <canvas id="scene" style={{ width: '100%', height: '100%' }} />;
+  return <canvas id='scene' style={{ width: '100%', height: '100%' }} />;
 };
 
 export default Scene;

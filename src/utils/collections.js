@@ -92,7 +92,7 @@ class Tree extends Collection {
         super(scene, numArcPts, numFillPts);
 
         // Initialize properties
-        this.type = "tree"; // Collection type
+        this.type = 'tree'; // Collection type
         this.components = []; // Array of components in tree
         this.componentIDs = []; // Array of component IDs in tree
         this.nextID = 1; // Initialize next component ID val
@@ -106,6 +106,18 @@ class Tree extends Collection {
 
         // Set up controls
         this.setupControls();
+    }
+
+    // Select all components
+    selectAll() {
+        this.select(this.components);
+    }
+
+    // Deselect all components
+    deselectAll() {
+        this.deselect(this.components);
+        this.hideGizmos(this.components);
+        this.deselectConnections(this.components);
     }
 
     // Add component
@@ -122,20 +134,20 @@ class Tree extends Collection {
             for (let i = 0; i < components.length; i++) {
                 // Create duplicate component
                 const c = components[i];
-                if (c.type == "leaf") {
+                if (c.type == 'leaf') {
                     this.add(new Components.Leaf(this.scene, this, this.snapDist, this.snapRot,
                          [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenX, c.lenY));
-                } else if (c.type == "stem") {
+                } else if (c.type == 'stem') {
                     this.add(new Components.Stem(this.scene, this, this.snapDist, this.snapRot, 
                         [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, 
                         c.radFill, c.radConn, c.lenConn, c.thickBT, c.reflected, 
                         this.numArcPts, this.numFillPts));
-                } else if (c.type == "branch") {
+                } else if (c.type == 'branch') {
                     this.add(new Components.Branch(this.scene, this, this.snapDist, this.snapRot, 
                         [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, 
                         c.radBranch, c.radHole, c.spacHole, c.lenSlot, c.reflected, 
                         this.numArcPts));
-                } else if (c.type == "trunk") {
+                } else if (c.type == 'trunk') {
                     this.add(new Components.Trunk(this.scene, this, this.snapDist, this.snapRot, 
                         [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
                         c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, 
@@ -159,6 +171,11 @@ class Tree extends Collection {
 
         // Log updated tree
         this.log();
+    }
+
+    // Copy selected components
+    copySelected() {
+        this.copy(this.selComponents);
     }
     
     // Delete specified components
@@ -199,6 +216,11 @@ class Tree extends Collection {
         this.log();
     }
 
+    // Delete selected components
+    formalDeleteSelected() {
+        this.formalDelete(this.selComponents);
+    }
+
     // Show specified components gizmos
     showGizmos(components) {
         for (let i = 0; i < components.length; i++) {
@@ -222,6 +244,19 @@ class Tree extends Collection {
         } else {
             this.showGizmos(components);
         }
+    }
+
+    // Toggle selected components gizmos visibility
+    toggleGizmosSelected() {
+        if (this.selComponents.length > 0) {
+            this.toggleGizmos(this.selComponents);
+        }
+    }
+
+    // Toggle all components connections visibility
+    toggleAllConnections() {
+        this.toggleConnections(this.components);
+        this.deselectConnections(this.components);
     }
 
     // Deselect specified components connections
@@ -261,7 +296,7 @@ class Tree extends Collection {
             const num = components.length;
             for (let i = 0; i < num; i++) {
                 const c = components[i];
-                if (c.type == "stem" || c.type == "branch" || c.type == "trunk") {
+                if (c.type == 'stem' || c.type == 'branch' || c.type == 'trunk') {
                     old.push(c);
 
                     // Update reflected toggle
@@ -271,17 +306,17 @@ class Tree extends Collection {
                     }
                     
                     // Create reflected version of component
-                    if (c.type == "stem") {
+                    if (c.type == 'stem') {
                         this.add(new Components.Stem(this.scene, this, this.snapDist, this.snapRot, 
                             [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, 
                             c.radFill, c.radConn, c.lenConn, c.thickBT, newReflected, 
                             this.numArcPts, this.numFillPts));
-                    } else if (c.type == "branch") {
+                    } else if (c.type == 'branch') {
                         this.add(new Components.Branch(this.scene, this, this.snapDist, this.snapRot, 
                             [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, 
                             c.radBranch, c.radHole, c.spacHole, c.lenSlot, newReflected, 
                             this.numArcPts));
-                    } else if (c.type == "trunk") {
+                    } else if (c.type == 'trunk') {
                         this.add(new Components.Trunk(this.scene, this, this.snapDist, this.snapRot, 
                             [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
                             c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, 
@@ -312,6 +347,16 @@ class Tree extends Collection {
         this.log();
     }
 
+    // Reflect selected components
+    reflectSelected() {
+        this.reflect(this.selComponents);
+    }
+
+    // Toggle all components transparency
+    toggleAllTransparency() {
+        this.toggleTransparency(this.components);
+    }
+
     // Updates specified components visuals
     updateVisuals(components) {
         for (let i = 0; i < components.length; i++) {
@@ -329,83 +374,78 @@ class Tree extends Collection {
             switch (kbInfo.type) {
                 case BABYLON.KeyboardEventTypes.KEYDOWN:
                     switch (kbInfo.event.key) {
-                        // A key selects all components
-                        case "a":
-                        case "A":
-                            this.select(this.components);
-                        break
-
-                        // C key copies selected components
-                        case "c":
-                        case "C":
-                            this.copy(this.selComponents);
-                        break
-
-                        // M key toggles gizmos visibility for selected components
-                        case "m":
-                        case "M":
-                            if (this.selComponents.length > 0) {
-                                this.toggleGizmos(this.selComponents);
-                            }
-                        break
-
-                        // Escape key deselects all components
-                        case "Escape":
-                            this.deselect(this.components);
-                            this.hideGizmos(this.components);
-                            this.deselectConnections(this.components);
-                        break
-                        
-                        // Delete key deletes selected components
-                        case "Delete":
-                            this.formalDelete(this.selComponents);
-                        break
-
-                        // N key toggles connections visibility for all components
-                        case "n":
-                        case "N":
-                            this.toggleConnections(this.components);
-                            this.deselectConnections(this.components);
-                        break
-
-                        // T key toggles transparency for all components
-                        case "t":
-                        case "T":
-                            this.toggleTransparency(this.components);
-                        break
-
-                        // Q key toggles structural elements visibility for all components
-                        case "q":
-                        case "Q":
-                            this.toggleElements(this.components);
-                        break
-
-                        // R key reflects selected components
-                        case "r":
-                        case "R":
-                            this.reflect(this.selComponents);
-                        break
-
-                        // [ key is undo action
-                        case "[":
-                            this.undo();
-                        break
-
-                        // ] key is redo action
-                        case "]":
-                            this.redo();
-                        break
-
                         // L key loads tree file
-                        case "l":
-                        case "L":
+                        case 'l':
+                        case 'L':
                             this.load();
                         break
 
                         // S key saves tree file
-                        case "s":
-                        case "S":
+                        case 's':
+                        case 'S':
                             this.save();
+                        break
+
+                        // [ key is undo action
+                        case '[':
+                            this.undo();
+                        break
+
+                        // ] key is redo action
+                        case ']':
+                            this.redo();
+                        break
+
+                        // A key selects all components
+                        case 'a':
+                        case 'A':
+                            this.selectAll();
+                        break
+                        
+                        // Escape key deselects all components
+                        case 'Escape':
+                            this.deselectAll();
+                        break
+
+                        // C key copies selected components
+                        case 'c':
+                        case 'C':
+                            this.copySelected();
+                        break
+
+                        // Delete key deletes selected components
+                        case 'Delete':
+                            this.formalDeleteSelected();
+                        break
+
+                        // M key toggles gizmos visibility for selected components
+                        case 'm':
+                        case 'M':
+                            this.toggleGizmosSelected();
+                        break
+                        
+                        // R key reflects selected components
+                        case 'r':
+                        case 'R':
+                            this.reflectSelected();
+                        break
+
+                        // N key toggles connections visibility for all components
+                        case 'n':
+                        case 'N':
+                            this.toggleAllConnections();
+                        break
+
+                        // T key toggles transparency for all components
+                        case 't':
+                        case 'T':
+                            this.toggleAllTransparency();
+                        break
+
+                        // Q key toggles structural elements visibility for all components
+                        case 'q':
+                        case 'Q':
+                            //this.toggleElements(this.components);
                         break
                     }
                 break;
@@ -419,15 +459,15 @@ class Tree extends Collection {
         for (let i = 0; i < this.components.length; i++) {
             const c = this.components[i];
             let line = [];
-            if (c.type == "leaf") {
+            if (c.type == 'leaf') {
                 line = [c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenX, c.lenY, '\n'];
-            } else if (c.type == "stem") {
+            } else if (c.type == 'stem') {
                 line = [c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.angleBend, c.lenStem, 
                     c.radStem, c.radFill, c.radConn, c.lenConn, c.thickBT, c.reflected, '\n'];
-            } else if (c.type == "branch") {
+            } else if (c.type == 'branch') {
                 line = [c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenBranch, c.thickBranch, 
                     c.radBranch, c.radHole, c.spacHole, c.lenSlot, c.reflected, '\n'];
-            } else if (c.type == "trunk") {
+            } else if (c.type == 'trunk') {
                 line = [c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenTrunk, c.widthTile, 
                     c.thickTile, c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, 
                     c.radHole, c.spacHole, c.overhang, c.reflected, '\n'];
@@ -449,19 +489,19 @@ class Tree extends Collection {
             }
             
             // Add component
-            if (data[0] == "leaf") {
+            if (data[0] == 'leaf') {
                 this.add(new Components.Leaf(this.scene, this, this.snapDist, this.snapRot, 
                     [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8]));
-            } else if (data[0] == "stem") {
+            } else if (data[0] == 'stem') {
                 this.add(new Components.Stem(this.scene, this, this.snapDist, this.snapRot, 
                     [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], 
                     data[9], data[10], data[11], data[12], data[13], data[14],
                     this.numArcPts, this.numFillPts));
-            } else if (data[0] == "branch") {
+            } else if (data[0] == 'branch') {
                 this.add(new Components.Branch(this.scene, this, this.snapDist, this.snapRot, 
                     [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], 
                     data[9], data[10], data[11], data[12], data[13], this.numArcPts));
-            } else if (data[0] == "trunk") {
+            } else if (data[0] == 'trunk') {
                 this.add(new Components.Trunk(this.scene, this, this.snapDist, this.snapRot, 
                     [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], 
                     data[9], data[10], data[11], data[12], data[13], data[14], data[15], 
@@ -530,8 +570,8 @@ class Tree extends Collection {
 
     // Save tree file
     save() {
-        const file = new Blob(this.compress(), {type: "text/plain;charset=utf-8",});
-        saveAs(file, "myTree.txt");
+        const file = new Blob(this.compress(), {type: 'text/plain;charset=utf-8',});
+        saveAs(file, 'myTree.txt');
     }
 
     // Load tree file
@@ -550,7 +590,7 @@ class Tree extends Collection {
                 const files = input.files;
                 if (files.length > 0) {
                     const reader = new FileReader();
-                    reader.readAsText(files[0], "utf-8");
+                    reader.readAsText(files[0], 'utf-8');
                     reader.onload = () => {
                         // Create components per file lines
                         const lines = reader.result.split('\n');
@@ -565,7 +605,7 @@ class Tree extends Collection {
                         reject(reader.error);
                     };
                 } else {
-                    reject(new Error("no file selected"));
+                    reject(new Error('No file selected'));
                 }
             };
         });
@@ -581,7 +621,7 @@ class Almanac extends Collection {
         super(scene, numArcPts, numFillPts);
 
         // Initialize properties
-        this.type = "almanac"; // Collection type
+        this.type = 'almanac'; // Collection type
         this.leaves = []; // Array of leaf components in almanac
         this.stems = []; // Array of stem components in almanac
         this.branches = []; // Array of branch components in almanac
@@ -721,8 +761,8 @@ class Almanac extends Collection {
                 case BABYLON.KeyboardEventTypes.KEYDOWN:
                     switch (kbInfo.event.key) {
                         // T key toggles transparency for all components
-                        case "t":
-                        case "T":
+                        case 't':
+                        case 'T':
                             this.toggleTransparency(this.leaves);
                             this.toggleTransparency(this.stems);
                             this.toggleTransparency(this.branches);
@@ -730,8 +770,8 @@ class Almanac extends Collection {
                         break
 
                         // Q key toggles structural elements visibility for all components
-                        case "q":
-                        case "Q":
+                        case 'q':
+                        case 'Q':
                             this.toggleElements(this.leaves);
                             this.toggleElements(this.stems);
                             this.toggleElements(this.branches);
@@ -739,7 +779,7 @@ class Almanac extends Collection {
                         break
 
                         // Escape key deselects all components
-                        case "Escape":
+                        case 'Escape':
                             this.deselect(this.leaves);
                             this.deselect(this.stems);
                             this.deselect(this.branches);

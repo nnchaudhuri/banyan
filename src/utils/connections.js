@@ -18,25 +18,25 @@ class Connection {
         const alpha = 0.5; // Transparency value
 
         // Default material
-        this.defMat = new BABYLON.StandardMaterial("defMat", scene);
+        this.defMat = new BABYLON.StandardMaterial('defMat', scene);
         this.defCol = new BABYLON.Color3(0, 1, 1);
         this.defMat.diffuseColor = this.defCol;
         this.defMat.alpha = alpha;
 
         // Hover material
-        this.hovMat = new BABYLON.StandardMaterial("hovMat", scene);
+        this.hovMat = new BABYLON.StandardMaterial('hovMat', scene);
         this.hovCol = new BABYLON.Color3(1, 1, 0);
         this.hovMat.diffuseColor = this.hovCol;
         this.hovMat.alpha = alpha;
 
         // Selected material
-        this.selMat = new BABYLON.StandardMaterial("selMat", scene);
+        this.selMat = new BABYLON.StandardMaterial('selMat', scene);
         this.selCol = new BABYLON.Color3(0, 1, 0);
         this.selMat.diffuseColor = this.selCol;
         this.selMat.alpha = alpha;
 
         // Connected material
-        this.conMat = new BABYLON.StandardMaterial("conMat", scene);
+        this.conMat = new BABYLON.StandardMaterial('conMat', scene);
         this.conCol = new BABYLON.Color3(1, 0, 1);
         this.conMat.diffuseColor = this.conCol;
         this.conMat.alpha = alpha;
@@ -152,8 +152,8 @@ class Connection {
     // Set up connection controls & responses
     setupControls() {
         // Hover over connection
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this, "hovering", false));
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this, "hovering", true));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this, 'hovering', false));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this, 'hovering', true));
 
         // Click (select) connection
         this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.manageSelection()}));
@@ -166,10 +166,10 @@ class Edge extends Connection {
         super(scene, component, ID, [x, y, z, ax, ay, az]);
 
         // Initialize properties
-        this.type = "edge"; // Connection type
+        this.type = 'edge'; // Connection type
 
         // Create mesh
-        this.mesh = BABYLON.MeshBuilder.CreateBox("edge", {height:len, width:0.25, depth:0.05, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        this.mesh = BABYLON.MeshBuilder.CreateBox('edge', {height:len, width:0.25, depth:0.05, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         // Set starting position & rotation
         this.move(x, y, z);
@@ -188,14 +188,14 @@ class Joint extends Connection {
         super(scene, component, ID, [x, y, z, ax, ay, az]);
 
         // Initialize properties
-        this.type = "joint"; // Connection type
+        this.type = 'joint'; // Connection type
 
         // Create mesh
         const path = [
             new BABYLON.Vector3(0, 0, 0),
             new BABYLON.Vector3(0, len, 0)
         ];
-        this.mesh = BABYLON.MeshBuilder.CreateTube("joint", {path:path, radius:rad, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
+        this.mesh = BABYLON.MeshBuilder.CreateTube('joint', {path:path, radius:rad, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         // Set starting position & rotation
@@ -215,11 +215,11 @@ class Slot extends Connection {
         super(scene, component, ID, [x, y, z, ax, ay, az]);
 
         // Initialize properties
-        this.type = "slot"; // Connection type
+        this.type = 'slot'; // Connection type
 
         // Create mesh
         const shape = Geometry.pillShape(rad, len, 0, 0, numArcPts);
-        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("hole", {shape:shape, 
+        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon('hole', {shape:shape, 
             depth:depth, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
 
