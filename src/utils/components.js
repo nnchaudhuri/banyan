@@ -1,426 +1,8 @@
 import * as BABYLON from 'babylonjs';
 import earcut from 'earcut';
-import { saveAs } from 'file-saver';
-
-// define pill shape (Vector3 array)
-function pillShape(rad, len, startX, startZ, numArcPts) {
-    var pill = [];
-
-    // left semicircle edge
-    for (let i = 0; i <= numArcPts/2; i++) {
-        pill.push(new BABYLON.Vector3(startX+rad*Math.cos(Math.PI/2+i*2*Math.PI/numArcPts), 0, startZ+rad*Math.sin(Math.PI/2+i*2*Math.PI/numArcPts)));
-    }
-
-    // flat edge
-    if (len > 0) {
-        pill.push(new BABYLON.Vector3(startX+len, 0, startZ-1*rad));
-    }
-
-    // right semicircle edge
-    for (let i = 0; i <= numArcPts/2; i++) {
-        pill.push(new BABYLON.Vector3(startX+len+rad*Math.cos(-Math.PI/2+i*2*Math.PI/numArcPts), 0, startZ+rad*Math.sin(-Math.PI/2+i*2*Math.PI/numArcPts)));
-    }
-
-    return pill;
-}
-
-// define element class (base class for structural analysis)
-class Element {
-    constructor(scene, component, ID) {
-        // initialize properties
-        this.scene = scene; // scene hosting element
-        this.component = component; // component the element is a part of
-        this.ID = ID; // element ID
-        this.mesh = null; // initialize null mesh
-
-        // default material
-        this.defMat = new BABYLON.StandardMaterial("defMat", scene);
-        this.defCol = new BABYLON.Color3(1, 1, 1);
-        this.defMat.diffuseColor = this.defCol;
-
-        // selected material
-        this.selMat = new BABYLON.StandardMaterial("selMat", scene);
-        this.selCol = new BABYLON.Color3(0, 1, 0);
-        this.selMat.diffuseColor = this.selCol;
-
-        // intersected material
-        this.intMat = new BABYLON.StandardMaterial("intMat", scene);
-        this.intCol = new BABYLON.Color3(1, 0, 0);
-        this.intMat.diffuseColor = this.intCol;
-    }
-
-    // show element
-    show() {
-        this.mesh.isVisible = true;
-    }
-
-    // hide element
-    hide() {
-        this.mesh.isVisible = false;
-    }
-
-    // toggle element visibility
-    toggle() {
-        this.mesh.isVisible = !this.mesh.isVisible;
-    }
-
-    // delete element
-    delete() {
-        this.mesh.dispose();
-    }
-
-    // set up element visuals
-    setupVisuals() {
-        // default visibility
-        this.hide();
-        
-        // initialize mesh material
-        this.mesh.material = this.defMat;
-    }
-
-    // set up element controls & responses
-    setupControls() {
-    
-    }
-}
-
-// define node class (for structural analysis)
-class Node extends Element {
-    constructor(scene, component, ID, [x, y, z]) {
-        super(scene, component, ID);
-        
-        // initialize properties
-        // TO-DO update coordinates when components moved
-        this.x = x; // node x coordinate
-        this.y = y; // node y coordinate
-        this.z = z; // node z coordinate
-
-        // create mesh
-        this.mesh = BABYLON.MeshBuilder.CreateSphere("node", {diameter:0.75, segments:component.collection.numArcPts});
-        this.mesh.position.x += x;
-        this.mesh.position.y += y;
-        this.mesh.position.z += z;
-
-        // set up visuals & controls
-        this.setupVisuals();
-        this.mesh.actionManager = new BABYLON.ActionManager(scene);
-        this.setupControls();
-    }
-
-    // TO-DO ensure coordinates are updated when component is moved
-}
-
-// define frame element class (for structural analysis)
-class Frame extends Element {
-    constructor(scene, component, ID, nodeI, nodeJ, radMesh, A, E, Iy, Iz) {
-        super(scene, component, ID);
-        
-        // initialize properties
-        this.nodeI = nodeI; // frame node I
-        this.nodeJ = nodeJ; // frame node J
-        this.L = Math.sqrt(Math.pow(nodeJ.x-nodeI.x, 2)+Math.pow(nodeJ.y-nodeI.y, 2)+Math.pow(nodeJ.z-nodeI.z, 2)); // frame length
-        this.A = A; // frame sectional area
-        this.E = E; // frame young's modulus
-        this.Iy = Iy; // frame moment of inertia over local y-axis
-        this.Iz = Iz; // frame moment of inertia over local z-axis
-
-        // create mesh
-        const path = [new BABYLON.Vector3(nodeI.x, nodeI.y, nodeI.z), new BABYLON.Vector3(nodeJ.x, nodeJ.y, nodeJ.z)];
-        this.mesh = BABYLON.MeshBuilder.CreateTube("frame", {path:path, radius:radMesh, tessellation:component.collection.numArcPts, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-
-        // set up visuals & controls
-        this.setupVisuals();
-        this.mesh.actionManager = new BABYLON.ActionManager(scene);
-        this.setupControls();
-    }
-
-    // TO-DO construct local & global stiffness matrices
-}
-
-// MAYBE define link element class (for structural analysis) extends frame class
-
-// define area element class (for structural analysis)
-class Area extends Element {
-    constructor(scene, component, ID, nodeI, nodeJ, nodeK, nodeL, thickMesh) {
-        super(scene, component, ID);
-        
-        // initialize properties
-        this.nodeI = nodeI; // area node I
-        this.nodeJ = nodeJ; // area node J
-        this.nodeK = nodeK; // area node K
-        this.nodeL = nodeL; // area node L
-        // TO-DO add structural properties
-
-        // create mesh
-        const rect = [
-            new BABYLON.Vector3(nodeI.x, 0, nodeI.y),
-            new BABYLON.Vector3(nodeJ.x, 0, nodeJ.y),
-            new BABYLON.Vector3(nodeK.x, 0, nodeK.y),
-            new BABYLON.Vector3(nodeL.x, 0, nodeL.y)
-        ];
-        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("area", {shape:rect, 
-            depth:thickMesh, 
-            sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
-        this.mesh.addRotation(Math.PI/2, 0, 0);
-        this.mesh.position.z += thickMesh/2;
-
-        // set up visuals & controls
-        this.setupVisuals();
-        this.mesh.actionManager = new BABYLON.ActionManager(scene);
-        this.setupControls();
-    }
-
-    // TO-DO construct local & global stiffness matrices
-}
-
-// define structural analysis class
-class Analysis {
-    constructor(tree) {
-        // initialize properties
-        this.tree = tree; // tree this analysis is for
-        this.nodes = []; // initialize empty array of nodes
-        this.frames = []; // initialize empty array of frames
-        this.areas = []; // initialize empty array of areas
-    }
-
-    // TO-DO process nodes, removing overlapping nodes
-    // TO-DO check stability
-    // TO-DO construct stiffness matrix
-    // TO-DO solve stiffness equation
-    // TO-DO display forces & deformed shape
-}
-
-// define connection class
-class Connection {
-    constructor(scene, component, ID, [x, y, z, ax, ay, az]) {
-        // initialize properties
-        this.scene = scene; // scene hosting connection
-        this.component = component; // component the connection is a part of
-        this.ID = ID; // connection ID
-        this.type = null; // initialize null connection type
-        this.mesh = null; // initialize null mesh
-        this.hovering = false; // toggle for if connection is being hovered over
-        this.selected = false; // toggle for if connection is selected
-        this.connectedTo = null; // what this connection is connected to (null if unused)
-        this.monitors = []; // meshes that assist in checking for aligned connections
-        const alpha = 0.5; // transparency value
-
-        // default material
-        this.defMat = new BABYLON.StandardMaterial("defMat", scene);
-        this.defCol = new BABYLON.Color3(0, 1, 1);
-        this.defMat.diffuseColor = this.defCol;
-        this.defMat.alpha = alpha;
-
-        // hover material
-        this.hovMat = new BABYLON.StandardMaterial("hovMat", scene);
-        this.hovCol = new BABYLON.Color3(1, 1, 0);
-        this.hovMat.diffuseColor = this.hovCol;
-        this.hovMat.alpha = alpha;
-
-        // selected material
-        this.selMat = new BABYLON.StandardMaterial("selMat", scene);
-        this.selCol = new BABYLON.Color3(0, 1, 0);
-        this.selMat.diffuseColor = this.selCol;
-        this.selMat.alpha = alpha;
-
-        // connected material
-        this.conMat = new BABYLON.StandardMaterial("conMat", scene);
-        this.conCol = new BABYLON.Color3(1, 0, 1);
-        this.conMat.diffuseColor = this.conCol;
-        this.conMat.alpha = alpha;
-    }
-
-    // move connection (globally)
-    move(dx, dy, dz) {
-        this.mesh.position.x += dx;
-        this.mesh.position.y += dy;
-        this.mesh.position.z += dz;
-    }
-
-    // rotate connection (in degrees, about local origin) FIX!
-    rotate(rx, ry, rz) {
-        this.mesh.rotate(new BABYLON.Vector3(-1, 0, 0), rx*Math.PI/180, BABYLON.Space.WORLD);
-        this.mesh.rotate(new BABYLON.Vector3(0, -1, 0), ry*Math.PI/180, BABYLON.Space.WORLD);
-        this.mesh.rotate(new BABYLON.Vector3(0, 0, 1), rz*Math.PI/180, BABYLON.Space.WORLD);
-    }
-
-    // show connection
-    show() {
-        this.mesh.isVisible = true;
-    }
-
-    // hide connection
-    hide() {
-        this.mesh.isVisible = false;
-    }
-
-    // toggle connection visibility
-    toggle() {
-        this.mesh.isVisible = !this.mesh.isVisible;
-    }
-
-    // delete connection
-    delete() {
-        this.mesh.dispose();
-    }
-
-    // select connection
-    select() {
-        // deselect all other connections for this component
-        for (let i = 0; i < this.component.connections.length; i++) {
-            const c = this.component.connections[i];
-            if (this != c) {
-                c.deselect();
-            }
-        }
-        
-        // update properties
-        this.selected = true;
-
-        // selection coloring
-        this.defMat.diffuseColor = this.selCol;
-        this.hovMat.diffuseColor = this.selCol;
-        this.mesh.material = this.selMat;
-    }
-
-    // deselect connection
-    deselect() {
-        // update properties
-        this.selected = false;
-
-        // default coloring
-        this.defMat.diffuseColor = this.defCol;
-        this.hovMat.diffuseColor = this.hovCol;
-        this.mesh.material = this.defMat;
-    }
-
-    // manage connection selection
-    manageSelection() {
-        if (this.selected) {
-            this.deselect();
-        } else {
-            this.select();
-        }
-    }
-
-    // check if this connection is aligned (connectable) to another connection
-    connectable(conn) {
-        if (this.monitors.length > 1 && conn.monitors.length > 1 && (!this.component.intersecting || !conn.component.intersecting)) {
-            if (this.monitors[0].intersectsMesh(conn.monitors[0], false) && this.monitors[1].intersectsMesh(conn.monitors[1], false)) {
-                return true;
-            } else if (this.monitors[0].intersectsMesh(conn.monitors[1], false) && this.monitors[1].intersectsMesh(conn.monitors[0], false)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // set up connection visuals
-    setupVisuals() {
-        // default visibility
-        this.hide();
-        
-        // initialize mesh material
-        this.mesh.material = this.defMat;
-    }
-
-    // updates connection visuals
-    updateVisuals() {
-        if (this.selected) {
-            this.mesh.material = this.selMat;
-        } else if (this.hovering) {
-            this.mesh.material = this.hovMat;
-        } else if (this.connectedTo != null) {
-            this.mesh.material = this.conMat;
-        }  else {
-            this.mesh.material = this.defMat;
-        }
-    }
-
-    // set up connection controls & responses
-    setupControls() {
-        // hover over connection
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this, "hovering", false));
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this, "hovering", true));
-
-        // click (select) connection
-        this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.manageSelection()}));
-    }
-}
-
-// define edge class (side connection of leaf component)
-class Edge extends Connection {
-    constructor(scene, component, ID, [x, y, z, ax, ay, az], len) {
-        super(scene, component, ID, [x, y, z, ax, ay, az]);
-
-        // initialize properties
-        this.type = "edge"; // connection type
-
-        // create mesh
-        this.mesh = BABYLON.MeshBuilder.CreateBox("edge", {height:len, width:0.25, depth:0.05, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-
-        // set starting position & rotation
-        this.move(x, y, z);
-        this.rotate(ax, ay, az);
-
-        // set up visuals & controls
-        this.setupVisuals();
-        this.mesh.actionManager = new BABYLON.ActionManager(scene);
-        this.setupControls();
-    }
-}
-
-// define joint class (end connection of stem component & circle hole connections in branch & trunk components)
-class Joint extends Connection {
-    constructor(scene, component, ID, [x, y, z, ax, ay, az], rad, len, numArcPts) {
-        super(scene, component, ID, [x, y, z, ax, ay, az]);
-
-        // initialize properties
-        this.type = "joint"; // connection type
-
-        // create mesh
-        const path = [
-            new BABYLON.Vector3(0, 0, 0),
-            new BABYLON.Vector3(0, len, 0)
-        ];
-        this.mesh = BABYLON.MeshBuilder.CreateTube("joint", {path:path, radius:rad, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
-            sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-
-        // set starting position & rotation
-        this.move(x, y, z);
-        this.rotate(ax, ay, az);
-
-        // set up visuals & controls
-        this.setupVisuals();
-        this.mesh.actionManager = new BABYLON.ActionManager(scene);
-        this.setupControls();
-    }
-}
-
-// define slot class (slotted hole connections in branch component) FIX!
-class Slot extends Connection {
-    constructor(scene, component, ID, [x, y, z, ax, ay, az], rad, len, depth, numArcPts) {
-        super(scene, component, ID, [x, y, z, ax, ay, az]);
-
-        // initialize properties
-        this.type = "slot"; // connection type
-
-        // create mesh
-        const shape = pillShape(rad, len, 0, 0, numArcPts);
-        this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("hole", {shape:shape, 
-            depth:depth, 
-            sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
-
-        // set starting position & rotation
-        this.move(x, y, z);
-        this.rotate(ax, ay, az);
-
-        // set up visuals & controls
-        this.setupVisuals();
-        this.mesh.actionManager = new BABYLON.ActionManager(scene);
-        this.setupControls();
-    }
-}
+import * as Geometry from './geometry.js';
+import * as Elements from './elements.js';
+import * as Connections from './connections.js';
 
 // define component class
 class Component {
@@ -906,23 +488,23 @@ class Leaf extends Component {
         this.mesh.addRotation(-Math.PI/2, 0, 0); // rotate to default orientation
         
             // create nodes
-            const nodeI = new Node(scene, this, "i", [-lenX/2, lenY/2, 0]);
+            const nodeI = new Elements.Node(scene, this, "i", [-lenX/2, lenY/2, 0]);
             this.elements.push(nodeI);
-            const nodeJ = new Node(scene, this, "j", [lenX/2, lenY/2, 0]);
+            const nodeJ = new Elements.Node(scene, this, "j", [lenX/2, lenY/2, 0]);
             this.elements.push(nodeJ);
-            const nodeK = new Node(scene, this, "k", [lenX/2, -lenY/2, 0]);
+            const nodeK = new Elements.Node(scene, this, "k", [lenX/2, -lenY/2, 0]);
             this.elements.push(nodeK);
-            const nodeL = new Node(scene, this, "l", [-lenX/2, -lenY/2, 0]);
+            const nodeL = new Elements.Node(scene, this, "l", [-lenX/2, -lenY/2, 0]);
             this.elements.push(nodeL);
             
             // create area
-            this.elements.push(new Area(scene, this, "ijkl", nodeI, nodeJ, nodeK, nodeL, 0.05));
+            this.elements.push(new Elements.Area(scene, this, "ijkl", nodeI, nodeJ, nodeK, nodeL, 0.05));
             
         // create connections
-        const right = new Edge(scene, this, "right", [lenX/2, 0, 0, 0, 0, 0], lenY);
-        const top = new Edge(scene, this, "top", [0, lenY/2, 0, 0, 0, 90], lenX);
-        const left = new Edge(scene, this, "left", [-lenX/2, 0, 0, 0, 0, 0], lenY);
-        const bottom = new Edge(scene, this, "bottom", [0, -lenY/2, 0, 0, 0, 90], lenX);
+        const right = new Connections.Edge(scene, this, "right", [lenX/2, 0, 0, 0, 0, 0], lenY);
+        const top = new Connections.Edge(scene, this, "top", [0, lenY/2, 0, 0, 0, 90], lenX);
+        const left = new Connections.Edge(scene, this, "left", [-lenX/2, 0, 0, 0, 0, 0], lenY);
+        const bottom = new Connections.Edge(scene, this, "bottom", [0, -lenY/2, 0, 0, 0, 90], lenX);
         
             // create monitors
             const ne = BABYLON.MeshBuilder.CreateBox("ne", {size:this.monitorSize});
@@ -1011,11 +593,11 @@ class Stem extends Component {
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
             
             // create nodes
-            const nodeI = new Node(scene, this, "i", [0, 0, 0]);
+            const nodeI = new Elements.Node(scene, this, "i", [0, 0, 0]);
             this.elements.push(nodeI);
-            const nodeJ = new Node(scene, this, "j", [lenStem/2, 0, 0]);
+            const nodeJ = new Elements.Node(scene, this, "j", [lenStem/2, 0, 0]);
             this.elements.push(nodeJ);
-            const nodeK = new Node(scene, this, "k", [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)]);
+            const nodeK = new Elements.Node(scene, this, "k", [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)]);
             this.elements.push(nodeK);
 
             // bounding boxes
@@ -1092,8 +674,8 @@ class Stem extends Component {
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         // create cap (on female end)
-        const circle = pillShape(radStem, 0, 0, 0, numArcPts);
-        const hole = [pillShape(radConn, 0, 0, 0, numArcPts)];
+        const circle = Geometry.pillShape(radStem, 0, 0, 0, numArcPts);
+        const hole = [Geometry.pillShape(radConn, 0, 0, 0, numArcPts)];
         var cap = BABYLON.MeshBuilder.ExtrudePolygon("cap", {shape:circle, holes:hole, 
             depth:0, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
@@ -1121,8 +703,8 @@ class Stem extends Component {
             malePosi = [0, 0, 0, 0, 0, 90];
             malePoso = [-lenConn, 0, 0];
         }
-        const femStem = new Joint(scene, this, "femStem", femPosi, radStem+offset, lenConn, numArcPts);
-        const maleStem = new Joint(scene, this, "maleStem", malePosi, radStem+offset, lenConn, numArcPts);
+        const femStem = new Connections.Joint(scene, this, "femStem", femPosi, radStem+offset, lenConn, numArcPts);
+        const maleStem = new Connections.Joint(scene, this, "maleStem", malePosi, radStem+offset, lenConn, numArcPts);
 
             // create monitors
             let fi = BABYLON.MeshBuilder.CreateBox("fi", {size:this.monitorSize});
@@ -1189,8 +771,8 @@ class Stem extends Component {
                     malePosi = [i*thickBT, 0, 0, 0, 0, 90];
                     malePosii = [i*thickBT, 0, 0];
                 }
-                const femBT = new Joint(scene, this, "femBT", femPosi, radStem+offset/2, thickBT, numArcPts);
-                const maleBT = new Joint(scene, this, "maleBT", malePosi, radStem+offset/2, thickBT, numArcPts);
+                const femBT = new Connections.Joint(scene, this, "femBT", femPosi, radStem+offset/2, thickBT, numArcPts);
+                const maleBT = new Connections.Joint(scene, this, "maleBT", malePosi, radStem+offset/2, thickBT, numArcPts);
                 
                     // create monitors
                     const fii = BABYLON.MeshBuilder.CreateBox("fii", {size:this.monitorSize});
@@ -1205,15 +787,15 @@ class Stem extends Component {
                     maleBT.monitors = [mi, mii];
 
                     // create nodes
-                    nodeIJ = new Node(scene, this, "ij", [(i-1)*thickBT+thickBT/2, 0, 0]);
+                    nodeIJ = new Elements.Node(scene, this, "ij", [(i-1)*thickBT+thickBT/2, 0, 0]);
                     this.elements.push(nodeIJ);
-                    nodeJK = new Node(scene, this, "jk", [(lenStem/2)+(lenStem/2-i*thickBT+thickBT/2)*Math.cos(angleBend*Math.PI/180), 0, 
+                    nodeJK = new Elements.Node(scene, this, "jk", [(lenStem/2)+(lenStem/2-i*thickBT+thickBT/2)*Math.cos(angleBend*Math.PI/180), 0, 
                         (lenStem/2-i*thickBT+thickBT/2)*Math.sin(angleBend*Math.PI/180)]);
                     this.elements.push(nodeJK);
 
                     // create frames
-                    this.elements.push(new Frame(scene, this, "ij", prevIJ, nodeIJ, radFrame, 1, 1, 1, 1)); // TO-DO update properties
-                    this.elements.push(new Frame(scene, this, "jk", prevJK, nodeJK, radFrame, 1, 1, 1, 1)); // TO-DO update properties
+                    this.elements.push(new Elements.Frame(scene, this, "ij", prevIJ, nodeIJ, radFrame, 1, 1, 1, 1)); // TO-DO update properties
+                    this.elements.push(new Elements.Frame(scene, this, "jk", prevJK, nodeJK, radFrame, 1, 1, 1, 1)); // TO-DO update properties
                 
                 // update variables
                 this.connections.push(femBT);
@@ -1227,8 +809,8 @@ class Stem extends Component {
             }
 
                     // create remaining frames
-                    this.elements.push(new Frame(scene, this, "ij", prevIJ, nodeJ, radFrame, 1, 1, 1, 1)); // TO-DO update properties
-                    this.elements.push(new Frame(scene, this, "jk", prevJK, nodeJ, radFrame, 1, 1, 1, 1)); // TO-DO update properties
+                    this.elements.push(new Elements.Frame(scene, this, "ij", prevIJ, nodeJ, radFrame, 1, 1, 1, 1)); // TO-DO update properties
+                    this.elements.push(new Elements.Frame(scene, this, "jk", prevJK, nodeJ, radFrame, 1, 1, 1, 1)); // TO-DO update properties
 
         // set parents
         this.parentConnections();
@@ -1267,7 +849,7 @@ class Branch extends Component {
         this.numArcPts = numArcPts; // # of points defining circle arc resolution
 
         // create profile shape
-        const profile = pillShape(radBranch, lenBranch, 0, 0, numArcPts);
+        const profile = Geometry.pillShape(radBranch, lenBranch, 0, 0, numArcPts);
 
             // above holes bounding box
             const above = [
@@ -1301,14 +883,14 @@ class Branch extends Component {
         const holes = [];
 
             // left circle hole is local origin
-            const leftHole = pillShape(radHole, 0, 0, 0, numArcPts);
+            const leftHole = Geometry.pillShape(radHole, 0, 0, 0, numArcPts);
             holes.push(leftHole);
                 // create node
-                const nodeI = new Node(scene, this, "i", [0, -thickBranch/2, 0]);
+                const nodeI = new Elements.Node(scene, this, "i", [0, -thickBranch/2, 0]);
                 this.elements.push(nodeI);
 
                 // create connection
-                const leftConn = new Joint(scene, this, "left", [0, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts);
+                const leftConn = new Connections.Joint(scene, this, "left", [0, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts);
 
                     // create monitors
                     const mL0 = BABYLON.MeshBuilder.CreateBox("mL0", {size:this.monitorSize});
@@ -1351,11 +933,11 @@ class Branch extends Component {
             // slot holes
             let startSlot = spacHole;
             for (let i = 0; i < lengths.length; i++) {
-                const slotHole = pillShape(radHole, lengths[i], startSlot, 0, numArcPts);
+                const slotHole = Geometry.pillShape(radHole, lengths[i], startSlot, 0, numArcPts);
                 holes.push(slotHole);
 
                 // create connection
-                this.connections.push(new Slot(scene, this, i.toString(), [startSlot, 0, 0, 0, 0, 0], radHole, lengths[i], thickBranch, numArcPts));
+                this.connections.push(new Connections.Slot(scene, this, i.toString(), [startSlot, 0, 0, 0, 0, 0], radHole, lengths[i], thickBranch, numArcPts));
                 
                 // between holes bounding box
                 const btwn = [
@@ -1389,14 +971,14 @@ class Branch extends Component {
                 this.BB.push(finSlotRBB);
 
             // right circle hole
-            const rightHole = pillShape(radHole, 0, lenBranch, 0, numArcPts);
+            const rightHole = Geometry.pillShape(radHole, 0, lenBranch, 0, numArcPts);
             holes.push(rightHole);
                 // create node
-                const nodeJ = new Node(scene, this, "j", [lenBranch, -thickBranch/2, 0]);
+                const nodeJ = new Elements.Node(scene, this, "j", [lenBranch, -thickBranch/2, 0]);
                 this.elements.push(nodeJ);
 
                 // create connection
-                const rightConn = new Joint(scene, this, "right", [lenBranch, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts);
+                const rightConn = new Connections.Joint(scene, this, "right", [lenBranch, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts);
                 
                     // create monitors
                     const mR0 = BABYLON.MeshBuilder.CreateBox("mR0", {size:this.monitorSize});
@@ -1429,7 +1011,7 @@ class Branch extends Component {
             sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
         this.mesh.addRotation(-Math.PI/2, 0, 0); // rotate to default orientation
                 // create frame
-                this.elements.push(new Frame(scene, this, "ij", nodeI, nodeJ, 0.25, 1, 1, 1, 1)); // TO-DO update properties
+                this.elements.push(new Elements.Frame(scene, this, "ij", nodeI, nodeJ, 0.25, 1, 1, 1, 1)); // TO-DO update properties
 
         // set parents
         this.parentConnections();
@@ -1538,11 +1120,11 @@ class Trunk extends Component {
             const holes = [];
             let k = 0;
             for (let i = 0; i <= lenTrunk; i += spacHole) {
-                const hole = pillShape(radHole, 0, i, 0, numArcPts);
+                const hole = Geometry.pillShape(radHole, 0, i, 0, numArcPts);
                 holes.push(hole);
 
                 // create connection
-                const holeConn = new Joint(scene, this, j.toString+","+k.toString(), [i, -edgeRibFirst-thickRib-j*(thickRib+spacRib), 0, 0, 0, 0], radHole, thickRib, numArcPts);
+                const holeConn = new Connections.Joint(scene, this, j.toString+","+k.toString(), [i, -edgeRibFirst-thickRib-j*(thickRib+spacRib), 0, 0, 0, 0], radHole, thickRib, numArcPts);
 
                     // create monitors
                     const m0 = BABYLON.MeshBuilder.CreateBox("m0", {size:this.monitorSize});
@@ -1659,732 +1241,4 @@ class Trunk extends Component {
     }
 }
 
-// define collection class (group of components)
-class Collection {
-    constructor(scene, numArcPts, numFillPts) {
-
-        // initialize properties
-        this.scene = scene; // scene hosting collection
-        this.numArcPts = numArcPts; // # of points defining circle arc resolution
-        this.numFillPts = numFillPts; // # of points defining fillet arc resolution
-        this.structureMode = false; // toggle for if structural elements are showing (structural analysis mode)
-        this.showingConnections = false; // toggle for if connections are visible
-        this.transparent = false; // toggle for components transparency
-    }
-
-    // select specified components
-    select(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].select();
-        }
-    }
-
-    // deselect specified components
-    deselect(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].deselect();
-        }
-    }
-
-    // show specified components connections
-    showConnections(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].showConnections();
-        }
-        this.showingConnections = true;
-    }
-
-    // hide specified components connections
-    hideConnections(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].hideConnections();
-        }
-        this.showingConnections = false;
-    }
-
-    // toggle specified components connections visibility
-    toggleConnections(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].toggleConnections();
-        }
-        this.showingConnections = !this.showingConnections;
-    }
-
-    // toggle specified components structural elements visibility
-    toggleElements(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].toggleElements();
-        }
-        this.structureMode = !this.structureMode;
-    }
-
-    // set the specified components materials opaque
-    opaque(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].opaque();
-        }
-        this.transparent = false;
-    }
-
-    // set the specified components materials transparent (xray)
-    xray(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].xray();
-        }
-        this.transparent = true;
-    }
-
-    // toggle specified components transparency
-    toggleTransparency(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].toggleTransparency();
-        }
-        this.transparent = !this.transparent;
-    }
-}
-
-// define tree class (arrangement of components for furniture design)
-class Tree extends Collection {
-    constructor(scene, numArcPts, numFillPts, snapDist, snapRot) {
-        super(scene, numArcPts, numFillPts);
-
-        // initialize properties
-        this.type = "tree"; // collection type
-        this.components = []; // array of components in tree
-        this.componentIDs = []; // array of component IDs in tree
-        this.nextID = 1; // initialize next component ID val
-        this.selComponents = []; // array of selected components in tree
-        this.selComponentIDs = []; // array of selected component IDs in tree
-        this.snapDist = snapDist; // snap distance for gizmo controls
-        this.snapRot = snapRot; // snap rotation angle (in degrees) for gizmo controls
-        this.showingGizmos = false; // toggle for gizmo visibility
-        this.history = []; // array of tree versions for undo
-        this.future = []; // array of tree versions for redo
-
-        // set up controls
-        this.setupControls();
-    }
-
-    // add component
-    add(component) {
-        this.components.push(component);
-        component.ID = this.nextID;
-        this.componentIDs.push(this.nextID);
-        this.nextID++;
-    }
-
-    // copy specified components
-    async copy(components) {
-        await new Promise((resolve) => {
-            for (let i = 0; i < components.length; i++) {
-                // create duplicate component
-                const c = components[i];
-                if (c.type == "leaf") {
-                    this.add(new Leaf(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenX, c.lenY));
-                } else if (c.type == "stem") {
-                    this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, c.radFill, 
-                        c.radConn, c.lenConn, c.thickBT, c.reflected, this.numArcPts, this.numFillPts));
-                } else if (c.type == "branch") {
-                    this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, c.radBranch, 
-                        c.radHole, c.spacHole, c.lenSlot, c.reflected, this.numArcPts));
-                } else if (c.type == "trunk") {
-                    this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
-                        c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, c.reflected, this.numArcPts));
-                }
-
-                // maintain visuals
-                if (this.structureMode) {
-                    this.components[this.components.length-1].showElements();
-                }
-                if (this.transparent) {
-                    this.components[this.components.length-1].xray();
-                }
-                if (this.showingConnections) {
-                    this.components[this.components.length-1].showConnections();
-                }
-            }
-
-            resolve(); // resolve promise
-        });
-
-        // log updated tree
-        this.log();
-    }
-    
-    // delete specified components
-    async delete(components) {
-        return new Promise((resolve) => {
-            // temporarily copy components array so deletion does not affect iteration
-            var temp = [];
-            for (let i = 0; i < components.length; i++) {
-                temp.push(components[i]);
-            }
-
-            // delete components
-            for (let i = 0; i < temp.length; i++) {
-                const c = temp[i];
-                const index = this.componentIDs.indexOf(c.ID);
-                if (index > -1) {
-                    this.componentIDs.splice(index, 1);
-                    this.components.splice(index, 1);
-                    c.deselect();
-                    c.delete();
-                }
-            }
-            temp = [];
-
-            resolve(); // resolve promise
-        });
-    }
-
-    // delete specified components & log updated tree
-    async formalDelete(components) {
-        await new Promise((resolve) => {
-            this.delete(components);
-
-            resolve(); // resolve promise
-        });
-        
-        // log updated tree
-        this.log();
-    }
-
-    // show specified components gizmos
-    showGizmos(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].showGizmos();
-        }
-        if (components.length > 0) {this.showingGizmos = true};
-    }
-
-    // hide specified components gizmos
-    hideGizmos(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].hideGizmos();
-        }
-        if (components.length > 0) {this.showingGizmos = false};
-    }
-
-    // toggle specified components gizmos visibility
-    toggleGizmos(components) {
-        if (this.showingGizmos) {
-            this.hideGizmos(components);
-        } else {
-            this.showGizmos(components);
-        }
-    }
-
-    // deselect specified components connections
-    deselectConnections(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].deselectConnections();
-        }
-    }
-
-    // checks for intersections between specified components
-    checkIntersections(components) {
-        for (let j = 0; j < components.length; j++) {
-            for (let i = 0; i < components.length; i++) {
-                if (i != j) {
-                    if (components[j].intersects(components[i])) {
-                        components[j].intersecting = true;
-                        break;
-                    } else {
-                        components[j].intersecting = false;
-                    }
-                }
-            }
-        }
-    }
-
-    // checks for connections between specified components
-    checkConnections(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].checkConnections(components);
-        }
-    }
-
-    // reflects specified components
-    async reflect(components) {
-        await new Promise((resolve) => {
-            const old = [];
-            const num = components.length;
-            for (let i = 0; i < num; i++) {
-                const c = components[i];
-                if (c.type == "stem" || c.type == "branch" || c.type == "trunk") {
-                    old.push(c);
-
-                    // update reflected toggle
-                    let newReflected = 1;
-                    if (c.reflected == 1) {
-                        newReflected = 0;
-                    }
-                    
-                    // create reflected version of component
-                    if (c.type == "stem") {
-                        this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.angleBend, c.lenStem, c.radStem, c.radFill, 
-                            c.radConn, c.lenConn, c.thickBT, newReflected, this.numArcPts, this.numFillPts));
-                    } else if (c.type == "branch") {
-                        this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenBranch, c.thickBranch, c.radBranch, 
-                            c.radHole, c.spacHole, c.lenSlot, newReflected, this.numArcPts));
-                    } else if (c.type == "trunk") {
-                        this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, [c.x, c.y, c.z, c.ax, c.ay, c.az], c.lenTrunk, c.widthTile, c.thickTile, 
-                            c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, c.radHole, c.spacHole, c.overhang, newReflected, this.numArcPts));
-                    }
-
-                    // maintain selections & visuals
-                    this.components[this.components.length-1].select();
-                    if (this.structureMode) {
-                        this.components[this.components.length-1].showElements();
-                    }
-                    if (this.transparent) {
-                        this.components[this.components.length-1].xray();
-                    }
-                    if (this.showingConnections) {
-                        this.components[this.components.length-1].showConnections();
-                    }
-                }
-            }
-
-            // delete non-reflected (old) components
-            this.delete(old);
-
-            resolve(); // resolve promise
-        });
-
-        // log updated tree
-        this.log();
-    }
-
-    // updates specified components visuals
-    updateVisuals(components) {
-        for (let i = 0; i < components.length; i++) {
-            components[i].updateVisuals();
-        }
-    }
-
-    // set up tree controls & responses
-    setupControls() {
-        // default gizmo visibility
-        this.hideGizmos(this.components);
-
-        // keyboard controls
-        this.scene.onKeyboardObservable.add((kbInfo) => {
-            switch (kbInfo.type) {
-                case BABYLON.KeyboardEventTypes.KEYDOWN:
-                    switch (kbInfo.event.key) {
-                        // a key selects all components
-                        case "a":
-                        case "A":
-                            this.select(this.components);
-                        break
-
-                        // c key copies selected components
-                        case "c":
-                        case "C":
-                            this.copy(this.selComponents);
-                        break
-
-                        // m key toggles gizmos visibility for selected components
-                        case "m":
-                        case "M":
-                            if (this.selComponents.length > 0) {
-                                this.toggleGizmos(this.selComponents);
-                            }
-                        break
-
-                        // escape key deselects all components
-                        case "Escape":
-                            this.deselect(this.components);
-                            this.hideGizmos(this.components);
-                            this.deselectConnections(this.components);
-                            // this.hideConnections(this.components);
-                        break
-                        
-                        // delete key deletes selected components
-                        case "Delete":
-                            this.formalDelete(this.selComponents);
-                        break
-
-                        // n key toggles connections visibility for all components
-                        case "n":
-                        case "N":
-                            this.toggleConnections(this.components);
-                            this.deselectConnections(this.components);
-                        break
-
-                        // t key toggles transparency for all components
-                        case "t":
-                        case "T":
-                            this.toggleTransparency(this.components);
-                        break
-
-                        // q key toggles structural elements visibility for all components
-                        case "q":
-                        case "Q":
-                            this.toggleElements(this.components);
-                        break
-
-                        // r key reflects selected components
-                        case "r":
-                        case "R":
-                            this.reflect(this.selComponents);
-                        break
-
-                        // [ key is undo action
-                        case "[":
-                            this.undo();
-                        break
-
-                        // ] key is redo action
-                        case "]":
-                            this.redo();
-                        break
-
-                        // l key loads tree file
-                        case "l":
-                        case "L":
-                            this.load();
-                        break
-
-                        // s key saves tree file
-                        case "s":
-                        case "S":
-                            this.save();
-                        break
-                    }
-                break;
-            }
-        });
-    }
-
-    // compress tree to string lines
-    compress() {
-        const lines = [];
-        for (let i = 0; i < this.components.length; i++) {
-            const c = this.components[i];
-            let line = [];
-            if (c.type == "leaf") {
-                line = [c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenX, c.lenY, '\n'];
-            } else if (c.type == "stem") {
-                line = [c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.angleBend, c.lenStem, c.radStem, c.radFill, c.radConn, c.lenConn, c.thickBT, c.reflected, '\n'];
-            } else if (c.type == "branch") {
-                line = [c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenBranch, c.thickBranch, c.radBranch, c.radHole, c.spacHole, c.lenSlot, c.reflected, '\n'];
-            } else if (c.type == "trunk") {
-                line = [c.type, c.x, c.y, c.z, c.ax, c.ay, c.az, c.lenTrunk, c.widthTile, c.thickTile, c.numRibs, c.thickRib, c.radRib, c.spacRib, c.edgeRib, 
-                    c.radHole, c.spacHole, c.overhang, c.reflected, '\n'];
-            }
-            lines.push(line.toString());
-        }
-        return lines;
-    }
-
-    // expand string lines to tree
-    expand(lines) {
-        for (let j = 0; j < lines.length; j++) {
-            // process component from string
-            let line = lines[j];
-            let dataString = line.split(',');
-            let data = [dataString[0]];
-            for (let i = 1; i < dataString.length; i++) {
-                data.push(parseFloat(dataString[i]));
-            }
-            
-            // add component
-            if (data[0] == "leaf") {
-                this.add(new Leaf(this.scene, this, this.snapDist, this.snapRot, 
-                    [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8]));
-            } else if (data[0] == "stem") {
-                this.add(new Stem(this.scene, this, this.snapDist, this.snapRot, 
-                    [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14],
-                    this.numArcPts, this.numFillPts));
-            } else if (data[0] == "branch") {
-                this.add(new Branch(this.scene, this, this.snapDist, this.snapRot, 
-                    [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], this.numArcPts));
-            } else if (data[0] == "trunk") {
-                this.add(new Trunk(this.scene, this, this.snapDist, this.snapRot, 
-                    [data[1], data[2], data[3], data[4], data[5], data[6]], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], 
-                    data[15], data[16], data[17], data[18], this.numArcPts));
-            }
-            
-            // maintain visuals
-            if (this.structureMode) {
-                this.components[this.components.length-1].showElements();
-            }
-            if (this.transparent) {
-                this.components[this.components.length-1].xray();
-            }
-            if (this.showingConnections) {
-                this.components[this.components.length-1].showConnections();
-            }
-        }
-    }
-
-    // log tree version (in history)
-    log() {
-        const maxVersions = 20;
-
-        // add version to history
-        this.history.push(this.compress());
-
-        // remove oldest version if exceeding max versions
-        while (this.history.length > maxVersions) {
-            this.history.shift();
-        }
-    }
-
-    // undo action (go back to previous tree version in history)
-    undo() {
-        if (this.history.length > 1) {
-            // store current tree length
-            let num = this.components.length;
-            
-            // move current tree to future
-            this.future.push(this.history.pop());
-
-            // expand previous tree version
-            this.expand(this.history[this.history.length-1]);
-
-            // clear current tree
-            this.delete(this.components.slice(0, num));
-        }
-    }
-
-    // redo action (go back to undone tree version in future)
-    redo() {
-        if (this.future.length > 0) {
-            // store current tree length
-            let num = this.components.length;
-        
-            // move undone tree from future to history
-            this.history.push(this.future.pop());
-
-            // expand undone tree version
-            this.expand(this.history[this.history.length-1]);
-
-            // clear current tree
-            this.delete(this.components.slice(0, num));
-        }
-    }
-
-    // save tree file
-    save() {
-        const file = new Blob(this.compress(), {type: "text/plain;charset=utf-8",});
-        saveAs(file, "myTree.txt");
-    }
-
-    // load tree file
-    async load() {
-        // store previous tree length
-        let num = this.components.length;
-    
-        // process file from local browser
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.click();
-    
-        // wrap file selection and reading in a promise
-        await new Promise((resolve, reject) => {
-            input.onchange = () => {
-                const files = input.files;
-                if (files.length > 0) {
-                    const reader = new FileReader();
-                    reader.readAsText(files[0], "utf-8");
-                    reader.onload = () => {
-                        // create components per file lines
-                        const lines = reader.result.split('\n');
-                        this.expand(lines);
-
-                        // clear previous tree
-                        this.delete(this.components.slice(0, num));
-
-                        resolve(); // resolve promise
-                    };
-                    reader.onerror = () => {
-                        reject(reader.error);  // reject the promise in case of errors
-                    };
-                } else {
-                    reject(new Error("no file selected"));
-                }
-            };
-        });
-
-        // log loaded tree
-        this.log();
-    }
-}
-
-// define almanac class (library of components for browsing & use in trees)
-class Almanac extends Collection {
-    constructor(scene, numArcPts, numFillPts) {
-        super(scene, numArcPts, numFillPts);
-
-        // initialize properties
-        this.type = "almanac"; // collection type
-        this.leaves = []; // array of leaf components in almanac
-        this.stems = []; // array of stem components in almanac
-        this.branches = []; // array of branch components in almanac
-        this.trunks = []; // array of trunk components in almanac
-
-        // set up controls
-        this.setupControls();
-    }
-
-    // generate leaves in almanac per input criteria
-    generateLeaves([x0, y0, z0], [lenXMin, lenXIncr, lenXMax], [lenYMin, lenYIncr, lenYMax]) {
-        // initialize position variables
-        let x = x0;
-        let y = y0;
-        let z = z0;
-        const dx = 2;
-        const dy = 0;
-        const dz = 2;
-
-        // generate leaves
-        for (let lenX = lenXMin; lenX <= lenXMax; lenX += lenXIncr) {
-            for (let lenY = lenYMin; lenY <= lenYMax; lenY += lenYIncr) {
-                this.leaves.push(new Leaf(this.scene, this, 0, 0, [x, y, z, 0, 0, 0], lenX, lenY));
-                z += lenY+dz;
-            }
-            z = z0;
-            x += lenX+dx;
-        }   
-    }
-
-    // generate stems in almanac per input criteria
-    generateStems([x0, y0, z0], [angleBendMin, angleBendIncr, angleBendMax], [lenStemMin, lenStemIncr, lenStemMax], radStem, radFill, radConn, lenConn, thickBT) {
-        // initialize position variables
-        let x = x0;
-        let y = y0;
-        let z = z0;
-        const dx = 0;
-        const dy = 2;
-        const dz = 2;
-        
-        // generate stems
-        for (let angleBend = angleBendMin; angleBend <= angleBendMax; angleBend += angleBendIncr) {
-            for (let lenStem = lenStemMin; lenStem <= lenStemMax; lenStem += lenStemIncr) {
-                this.stems.push(new Stem(this.scene, this, 0, 0, [x, y, z, 0, 0, 0], angleBend, lenStem, radStem, radFill, radConn, lenConn, thickBT, 0, 
-                    this.numArcPts, this.numFillPts));
-                z += lenStem+dz;
-            }
-            z = z0;
-            y += lenStemMax/2+dy;
-        }   
-    }
-
-    // generate branches in almanac per input criteria
-    generateBranches([x0, y0, z0], [lenBranchMin, lenBranchIncr, lenBranchMax], thickBranch, radBranch, radHole, spacHole, lenSlot) {
-        // initialize position variables
-        let x = x0;
-        let y = y0;
-        let z = z0;
-        const dx = 0;
-        const dy = 2;
-        const dz = 0;
-
-        // generate branches
-        for (let lenBranch = lenBranchMin; lenBranch <= lenBranchMax; lenBranch += lenBranchIncr) {
-            this.branches.push(new Branch(this.scene, this, 0, 0, [x, y, z, 0, 0, 0], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, 0, this.numArcPts));
-            y += 2*radBranch+dy;
-        }
-    }
-
-    // generate trunks in almanac per input criteria
-    generateTrunks([x0, y0, z0], [widthTileMin, widthTileIncr, widthTileMax], [lenTrunkMin, lenTrunkIncr, lenTrunkMax], thickTile, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang) {
-        // initialize position variables
-        let x = x0;
-        let y = y0;
-        let z = z0;
-        const dx = 2;
-        const dy = 2;
-        const dz = 0;
-
-        // generate trunks
-        for (let widthTile = widthTileMin; widthTile <= widthTileMax; widthTile += widthTileIncr) {
-            const numRibs = Math.floor((widthTile-edgeRib-thickRib)/(thickRib+spacRib))+1;
-            for (let lenTrunk = lenTrunkMin; lenTrunk <= lenTrunkMax; lenTrunk += lenTrunkIncr) {
-                this.trunks.push(new Trunk(this.scene, this, 0, 0, [x, y, z, 0, 0, 0], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, 
-                    radHole, spacHole, overhang, 0, this.numArcPts));
-                x += lenTrunk+2*(2*radRib+overhang)+dx;
-            }
-            x = x0;
-            y += 2*radRib+thickTile+dy;
-        }
-    }
-
-    // delete specified components
-    delete(components) {
-        for (let i = components.length-1; i >= 0; i--) {
-            components[i].delete();
-        }
-    }
-
-    // delete all components in almanac
-    deleteAll() {
-        this.delete(this.leaves);
-        this.delete(this.stems);
-        this.delete(this.branches);
-        this.delete(this.trunks);
-    }
-
-    // updates all component visuals
-    updateVisuals() {
-        for (let i = 0; i < this.leaves.length; i++) {
-            this.leaves[i].updateVisuals();
-        }
-        for (let i = 0; i < this.stems.length; i++) {
-            this.stems[i].updateVisuals();
-        }
-        for (let i = 0; i < this.branches.length; i++) {
-            this.branches[i].updateVisuals();
-        }
-        for (let i = 0; i < this.trunks.length; i++) {
-            this.trunks[i].updateVisuals();
-        }
-    }
-
-    // set up almanac controls & responses
-    setupControls() {
-        // keyboard controls
-        this.scene.onKeyboardObservable.add((kbInfo) => {
-            switch (kbInfo.type) {
-                case BABYLON.KeyboardEventTypes.KEYDOWN:
-                    switch (kbInfo.event.key) {
-                        // t key toggles transparency for all components
-                        case "t":
-                        case "T":
-                            this.toggleTransparency(this.leaves);
-                            this.toggleTransparency(this.stems);
-                            this.toggleTransparency(this.branches);
-                            this.toggleTransparency(this.trunks);
-                        break
-
-                        // q key toggles structural elements visibility for all components
-                        case "q":
-                        case "Q":
-                            this.toggleElements(this.leaves);
-                            this.toggleElements(this.stems);
-                            this.toggleElements(this.branches);
-                            this.toggleElements(this.trunks);
-                        break
-
-                        // escape key deselects all components
-                        case "Escape":
-                            this.deselect(this.leaves);
-                            this.deselect(this.stems);
-                            this.deselect(this.branches);
-                            this.deselect(this.trunks);
-                        break
-                    }
-                break;
-            }
-        });
-    }
-}
-
-// export classes for use in scenes
-export { Element, Node, Frame, Area, Analysis,
-            Connection, Edge, Joint, Slot,
-            Component, Leaf, Stem, Branch, Trunk,
-            Collection, Tree, Almanac };
+export { Component, Leaf, Stem, Branch, Trunk };

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import * as BABYLON from 'babylonjs';
-import * as Components from './components.js';
+import * as Collections from '../utils/collections.js';
 
 const Scene = () => {
   useEffect(() => {
@@ -15,7 +15,8 @@ const Scene = () => {
     scene.clearColor = new BABYLON.Color4(1, 1, 1, 1);
 
     // Setup orthogonal camera
-    const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI/4, Math.PI/4, 100, BABYLON.Vector3.Zero());
+    const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI/4, Math.PI/4, 100, 
+      BABYLON.Vector3.Zero());
     camera.attachControl(canvas, true);
     camera.inputs.attached.keyboard.angularSpeed = 0.005;
     camera.minZ = 0.01;
@@ -85,7 +86,7 @@ const Scene = () => {
     const numFillPts = 32; // # of points defining fillet arc resolution
 
     // Create test tree
-    let tree = new Components.Tree(scene, numArcPts, numFillPts, snapDist, snapRot);
+    let tree = new Collections.Tree(scene, numArcPts, numFillPts, snapDist, snapRot);
     scene.registerBeforeRender(function() {
         tree.checkIntersections(tree.components);
         tree.checkConnections(tree.components);
@@ -101,7 +102,7 @@ const Scene = () => {
 
     /*
     // Create test almanac
-    let almanac = new Components.Almanac(scene, numArcPts, numFillPts);
+    let almanac = new Collections.Almanac(scene, numArcPts, numFillPts);
     //almanac.generateLeaves([0, 0, 0], [2, 2, 12], [2, 2, 12]);
     //almanac.generateStems([0, 0, 0], [0, 45, 90], [2, 2, 8], radStem, radFill, radConn, lenConn, thickBranch);
     //almanac.generateBranches([0, 0, 0], [2, 2, 30], thickBranch, radBranch, radHole, spacHole, lenSlot);

@@ -1,7 +1,7 @@
 import React from 'react';
-import Scene from './Scene.jsx';
-import Menu from './Menu.jsx';
-import './index.css';
+import Scene from '../components/Scene.jsx';
+import Menu from '../components/Menu.jsx';
+import '../styles/index.css';
 
 const App = () => {
   return (
