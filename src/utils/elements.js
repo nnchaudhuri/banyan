@@ -26,84 +26,84 @@ class Element {
         this.intMat.diffuseColor = this.intCol;
     }
 
-    // show element
+    // Show element
     show() {
         this.mesh.isVisible = true;
     }
 
-    // hide element
+    // Hide element
     hide() {
         this.mesh.isVisible = false;
     }
 
-    // toggle element visibility
+    // Toggle element visibility
     toggle() {
         this.mesh.isVisible = !this.mesh.isVisible;
     }
 
-    // delete element
+    // Delete element
     delete() {
         this.mesh.dispose();
     }
 
-    // set up element visuals
+    // Set up element visuals
     setupVisuals() {
-        // default visibility
+        // Default visibility
         this.hide();
         
-        // initialize mesh material
+        // Initialize mesh material
         this.mesh.material = this.defMat;
     }
 
-    // set up element controls & responses
+    // Set up element controls & responses
     setupControls() {
     
     }
 }
 
-// define node class (for structural analysis)
+// Define node class (for structural analysis)
 class Node extends Element {
     constructor(scene, component, ID, [x, y, z]) {
         super(scene, component, ID);
         
-        // initialize properties
+        // Initialize properties
         // TO-DO update coordinates when components moved
-        this.x = x; // node x coordinate
-        this.y = y; // node y coordinate
-        this.z = z; // node z coordinate
+        this.x = x; // Node x coordinate
+        this.y = y; // Node y coordinate
+        this.z = z; // Node z coordinate
 
-        // create mesh
+        // Create mesh
         this.mesh = BABYLON.MeshBuilder.CreateSphere("node", {diameter:0.75, segments:component.collection.numArcPts});
         this.mesh.position.x += x;
         this.mesh.position.y += y;
         this.mesh.position.z += z;
 
-        // set up visuals & controls
+        // Set up visuals & controls
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
     }
 }
 
-// define frame element class (for structural analysis)
+// Define frame element class (for structural analysis)
 class Frame extends Element {
     constructor(scene, component, ID, nodeI, nodeJ, radMesh, A, E, Iy, Iz) {
         super(scene, component, ID);
         
-        // initialize properties
-        this.nodeI = nodeI; // frame node I
-        this.nodeJ = nodeJ; // frame node J
-        this.L = Math.sqrt(Math.pow(nodeJ.x-nodeI.x, 2)+Math.pow(nodeJ.y-nodeI.y, 2)+Math.pow(nodeJ.z-nodeI.z, 2)); // frame length
-        this.A = A; // frame sectional area
-        this.E = E; // frame young's modulus
-        this.Iy = Iy; // frame moment of inertia over local y-axis
-        this.Iz = Iz; // frame moment of inertia over local z-axis
+        // Initialize properties
+        this.nodeI = nodeI; // Frame node I
+        this.nodeJ = nodeJ; // Frame node J
+        this.L = Math.sqrt(Math.pow(nodeJ.x-nodeI.x, 2)+Math.pow(nodeJ.y-nodeI.y, 2)+Math.pow(nodeJ.z-nodeI.z, 2)); // Frame length
+        this.A = A; // Frame sectional area
+        this.E = E; // Frame young's modulus
+        this.Iy = Iy; // Frame moment of inertia over local y-axis
+        this.Iz = Iz; // Frame moment of inertia over local z-axis
 
-        // create mesh
+        // Create mesh
         const path = [new BABYLON.Vector3(nodeI.x, nodeI.y, nodeI.z), new BABYLON.Vector3(nodeJ.x, nodeJ.y, nodeJ.z)];
         this.mesh = BABYLON.MeshBuilder.CreateTube("frame", {path:path, radius:radMesh, tessellation:component.collection.numArcPts, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
-        // set up visuals & controls
+        // Set up visuals & controls
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
@@ -114,19 +114,19 @@ class Frame extends Element {
 
 // MAYBE define link element class (for structural analysis) extends frame class
 
-// define area element class (for structural analysis)
+// Define area element class (for structural analysis)
 class Area extends Element {
     constructor(scene, component, ID, nodeI, nodeJ, nodeK, nodeL, thickMesh) {
         super(scene, component, ID);
         
-        // initialize properties
-        this.nodeI = nodeI; // area node I
-        this.nodeJ = nodeJ; // area node J
-        this.nodeK = nodeK; // area node K
-        this.nodeL = nodeL; // area node L
+        // Initialize properties
+        this.nodeI = nodeI; // Area node I
+        this.nodeJ = nodeJ; // Area node J
+        this.nodeK = nodeK; // Area node K
+        this.nodeL = nodeL; // Area node L
         // TO-DO add structural properties
 
-        // create mesh
+        // Create mesh
         const rect = [
             new BABYLON.Vector3(nodeI.x, 0, nodeI.y),
             new BABYLON.Vector3(nodeJ.x, 0, nodeJ.y),
@@ -139,7 +139,7 @@ class Area extends Element {
         this.mesh.addRotation(Math.PI/2, 0, 0);
         this.mesh.position.z += thickMesh/2;
 
-        // set up visuals & controls
+        // Set up visuals & controls
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
@@ -148,14 +148,14 @@ class Area extends Element {
     // TO-DO construct local & global stiffness matrices
 }
 
-// define structural analysis class
+// Define structural analysis class
 class Analysis {
     constructor(tree) {
-        // initialize properties
-        this.tree = tree; // tree this analysis is for
-        this.nodes = []; // initialize empty array of nodes
-        this.frames = []; // initialize empty array of frames
-        this.areas = []; // initialize empty array of areas
+        // Initialize properties
+        this.tree = tree; // Tree this analysis is for
+        this.nodes = []; // Initialize empty array of nodes
+        this.frames = []; // Initialize empty array of frames
+        this.areas = []; // Initialize empty array of areas
     }
 
     // TO-DO process nodes, removing overlapping nodes

@@ -11,3 +11,15 @@ html, body {
     height: 100%;
     width: 100%;
   }
+
+  .button {
+    background-color: rgb(255, 255, 255);
+    color: black;
+    border: 1px solid rgb(100, 100, 100);
+    padding: 4px 6px;
+    border-radius: 6px;
+  }
+
+  .button:hover {
+    background-color: rgb(235, 235, 235);
+  }

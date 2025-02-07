@@ -4,35 +4,35 @@ import * as Geometry from './geometry.js';
 import * as Elements from './elements.js';
 import * as Connections from './connections.js';
 
-// define component class
+// Define component class
 class Component {
     constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]) {
-        // initialize properties
-        this.scene = scene; // scene hosting component
-        this.collection = collection; // collection the component is a part of
-        this.ID = null; // initialize null component ID
-        this.x = 0; // x position (of local origin), initialize to 0 as specific components set starting position & rotation
-        this.y = 0; // y position (of local origin), initialize to 0 as specific components set starting position & rotation
-        this.z = 0; // z position (of local origin), initialize to 0 as specific components set starting position & rotation
-        this.ax = 0; // x rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
-        this.ay = 0; // y rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
-        this.az = 0; // z rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
-        this.type = null; // initialize null component type
-        this.mesh = null; // initialize null mesh
-        this.structureMode = false; // toggle for if structural elements are showing (structural analysis mode)
-        this.elements = []; // initialize empty structural elements array
-        this.connections = []; // initialize empty connections array
-        this.showingConnections = false; // toggle for if connections are visible
-        this.monitorSize = 0.05; // connections monitor mesh size
-        this.BB = []; // initialize empty bounding boxes array (for mesh intersection detection)
-        this.BBOffset = 0.05; // offset for bounding boxes from mesh edges
-        this.hovering = false; // toggle for if component is being hovered over
-        this.selected = false; // toggle for if component is selected
-        this.intersecting = false; // toggle for if component is intersecting another component
-        this.transparent = false; // toggle for component transparency
+        // Initialize properties
+        this.scene = scene; // Scene hosting component
+        this.collection = collection; // Collection the component is a part of
+        this.ID = null; // Initialize null component ID
+        this.x = 0; // X position (of local origin), initialize to 0 as specific components set starting position & rotation
+        this.y = 0; // Y position (of local origin), initialize to 0 as specific components set starting position & rotation
+        this.z = 0; // Z position (of local origin), initialize to 0 as specific components set starting position & rotation
+        this.ax = 0; // X rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
+        this.ay = 0; // Y rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
+        this.az = 0; // Z rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
+        this.type = null; // Initialize null component type
+        this.mesh = null; // Initialize null mesh
+        this.structureMode = false; // Toggle for structural analysis mode
+        this.elements = []; // Initialize empty structural elements array
+        this.connections = []; // Initialize empty connections array
+        this.showingConnections = false; // Toggle for connection visibility
+        this.monitorSize = 0.05; // Connections monitor mesh size
+        this.BB = []; // Initialize empty bounding boxes array (for mesh intersection detection)
+        this.BBOffset = 0.05; // Offset for bounding boxes from mesh edges
+        this.hovering = false; // Toggle for if component is being hovered over
+        this.selected = false; // Toggle for if component is selected
+        this.intersecting = false; // Toggle for if component is intersecting another component
+        this.transparent = false; // Toggle for component transparency
 
-        // initialize gizmos
-        this.inclGizmos = [true, true, true, false, false, false]; // array of which gizmos to include [dx, dy, dz, rx, ry, rz]
+        // Initialize gizmos
+        this.inclGizmos = [true, true, true, false, false, false]; // Array of which gizmos to include [dx, dy, dz, rx, ry, rz]
         this.dxGizmo = null;
         this.dyGizmo = null;
         this.dzGizmo = null;
@@ -42,79 +42,79 @@ class Component {
         this.snapDist = snapDist;
         this.snapRot = snapRot;
 
-        // set axis colors
+        // Set axis colors
         this.xCol = new BABYLON.Color3(1, 0, 0);
         this.yCol = new BABYLON.Color3(0, 1, 0);
         this.zCol = new BABYLON.Color3(0, 0, 1);
 
-        // default material
+        // Default material
         this.defMat = new BABYLON.StandardMaterial("defMat", scene);
         this.defCol = new BABYLON.Color3(1, 1, 1);
         this.defMat.diffuseColor = this.defCol;
 
-        // hover material
+        // Hover material
         this.hovMat = new BABYLON.StandardMaterial("hovMat", scene);
         this.hovCol = new BABYLON.Color3(1, 1, 0);
         this.hovMat.diffuseColor = this.hovCol;
 
-        // selected material
+        // Selected material
         this.selMat = new BABYLON.StandardMaterial("selMat", scene);
         this.selCol = new BABYLON.Color3(0, 1, 0);
         this.selMat.diffuseColor = this.selCol;
 
-        // intersected material
+        // Intersected material
         this.intMat = new BABYLON.StandardMaterial("intMat", scene);
         this.intCol = new BABYLON.Color3(1, 0, 0);
         this.intMat.diffuseColor = this.intCol;
     }
 
-    // move component (globally)
+    // Move component (globally)
     move(dx, dy, dz) {
-        // update position properties
+        // Update position properties
         this.x += dx;
         this.y += dy;
         this.z += dz;
 
-        // move mesh
+        // Move mesh
         this.mesh.position.x += dx;
         this.mesh.position.y += dy;
         this.mesh.position.z += dz;
     }
 
-    // rotate component (in degrees, about local origin) FIX!
+    // Rotate component (in degrees, about local origin) FIX!
     rotate(rx, ry, rz) {
-        // update rotation properties
+        // Update rotation properties
         this.ax += rx;
         this.ay += ry;
         this.az += rz;
 
-        // rotate mesh
+        // Rotate mesh
         this.mesh.rotate(new BABYLON.Vector3(-1, 0, 0), rx*Math.PI/180, BABYLON.Space.WORLD);
         this.mesh.rotate(new BABYLON.Vector3(0, -1, 0), ry*Math.PI/180, BABYLON.Space.WORLD);
         this.mesh.rotate(new BABYLON.Vector3(0, 0, 1), rz*Math.PI/180, BABYLON.Space.WORLD);
     }
 
-    // show component
+    // Show component
     show() {
         this.mesh.isVisible = true;
     }
 
-    // hide component
+    // Hide component
     hide() {
         this.mesh.isVisible = false;
     }
 
-    // toggle component visibility
+    // Toggle component visibility
     toggle() {
         this.mesh.isVisible = !this.mesh.isVisible;
     }
 
-    // delete component
+    // Delete component
     delete() {
         this.mesh.dispose();
     }
 
-    // show gizmos
+    // Show gizmos
     showGizmos() {
         if (this.inclGizmos[0]) {this.dxGizmo.attachedMesh = this.mesh};
         if (this.inclGizmos[1]) {this.dyGizmo.attachedMesh = this.mesh};
@@ -124,7 +124,7 @@ class Component {
         if (this.inclGizmos[5]) {this.rzGizmo.attachedMesh = this.mesh};
     }
 
-    // hide gizmos
+    // Hide gizmos
     hideGizmos() {
         this.dxGizmo.attachedMesh = null;
         this.dyGizmo.attachedMesh = null;
@@ -134,9 +134,9 @@ class Component {
         this.rzGizmo.attachedMesh = null;
     }
 
-    // select component
+    // Select component
     select() {
-        // update properties
+        // Update properties
         this.selected = true;
         if (this.collection.type == "tree") {
             const index = this.collection.selComponentIDs.indexOf(this.ID);
@@ -145,14 +145,14 @@ class Component {
                 this.collection.selComponentIDs.push(this.ID);
             }
 
-            // show gizmos
+            // Show gizmos
             if (this.collection.showingGizmos) {this.showGizmos()};
         }
     }
 
-    // deselect component
+    // Deselect component
     deselect() {
-        // update properties
+        // Update properties
         this.selected = false;
         if (this.collection.type == "tree") {
             const index = this.collection.selComponentIDs.indexOf(this.ID);
@@ -161,13 +161,13 @@ class Component {
                 this.collection.selComponents.splice(index, 1);
             }
 
-            // hide gizmos
+            // Hide gizmos
             this.hideGizmos();
             if (this.collection.selComponents.length < 1) {this.collection.showingGizmos = false};
         }
     }
 
-    // manage component selection
+    // Manage component selection
     manageSelection() {
         if (this.selected) {
             this.deselect();
@@ -176,7 +176,7 @@ class Component {
         }
     }
 
-    // show component connections
+    // Show component connections
     showConnections() {
         for (let i = 0; i < this.connections.length; i++) {
             this.connections[i].show();
@@ -184,7 +184,7 @@ class Component {
         this.showingConnections = true;
     }
 
-    // hide component connections
+    // Hide component connections
     hideConnections() {
         for (let i = 0; i < this.connections.length; i++) {
             this.connections[i].hide();
@@ -192,7 +192,7 @@ class Component {
         this.showingConnections = false;
     }
 
-    // toggle component connections visibility
+    // Toggle component connections visibility
     toggleConnections() {
         for (let i = 0; i < this.connections.length; i++) {
             this.connections[i].toggle();
@@ -200,14 +200,14 @@ class Component {
         this.showingConnections = !this.showingConnections;
     }
 
-    // deselect component connections
+    // Deselect component connections
     deselectConnections() {
         for (let i = 0; i < this.connections.length; i++) {
             this.connections[i].deselect();
         }
     }
     
-    // checks for valid connections from this component to other components
+    // Checks for valid connections from this component to other components
     checkConnections(components) {
         for (let j = 0; j < this.connections.length; j++) {
             const conn = this.connections[j];
@@ -229,7 +229,7 @@ class Component {
         }
     }
 
-    // show structural elements
+    // Show structural elements
     showElements() {
         for (let i = 0; i < this.elements.length; i++) {
             this.elements[i].show();
@@ -238,7 +238,7 @@ class Component {
         this.structureMode = true;
     }
 
-    // hide structural elements
+    // Hide structural elements
     hideElements() {
         for (let i = 0; i < this.elements.length; i++) {
             this.elements[i].hide();
@@ -247,7 +247,7 @@ class Component {
         this.structureMode = false;
     }
 
-    // toggle component structural elements visibility
+    // Toggle component structural elements visibility
     toggleElements() {
         for (let i = 0; i < this.elements.length; i++) {
             this.elements[i].toggle();
@@ -256,7 +256,7 @@ class Component {
         this.structureMode = !this.structureMode;
     }
 
-    // set the component mesh as the parent of the connection meshes
+    // Set the component mesh as the parent of the connection meshes
     parentConnections() {
         for (let i = 0; i < this.connections.length; i++) {
             this.connections[i].mesh.parent = this.mesh;
@@ -266,21 +266,21 @@ class Component {
         }
     }
 
-    // set the component mesh as the parent of the BB meshes
+    // Set the component mesh as the parent of the BB meshes
     parentBB() {
         for (let i = 0; i < this.BB.length; i++) {
             this.BB[i].parent = this.mesh;
         }
     }
 
-    // set the component mesh as the parent of the structural element meshes
+    // Set the component mesh as the parent of the structural element meshes
     parentElements() {
         for (let i = 0; i < this.elements.length; i++) {
             this.elements[i].mesh.parent = this.mesh;
         }
     }
         
-    // check for mesh intersection between this & another component based on bounding boxes
+    // Check for mesh intersection between this & another component based on bounding boxes
     intersects(component) {
         if (this.mesh.intersectsMesh(component.mesh, true)) {
             for (let j = 0; j < this.BB.length; j++) {
@@ -294,7 +294,7 @@ class Component {
         return false;
     }
 
-    // sets the component materials opaque
+    // Sets the component materials opaque
     opaque() {
         this.defMat.alpha = 1;
         this.hovMat.alpha = 1;
@@ -308,7 +308,7 @@ class Component {
         this.transparent = false;
     }
 
-    // sets the component materials transparent (xray)
+    // Sets the component materials transparent (xray)
     xray() {
         const alpha = 0.5;
         this.defMat.alpha = alpha;
@@ -323,7 +323,7 @@ class Component {
         this.transparent = true;
     }
 
-    // toggle component transparency
+    // Toggle component transparency
     toggleTransparency() {
         if (this.transparent) {
             this.opaque();
@@ -332,21 +332,21 @@ class Component {
         }
     }
 
-    // set up component visuals
+    // Set up component visuals
     setupVisuals() {
-        // initialize mesh material
+        // Initialize mesh material
         this.mesh.material = this.defMat;
         if (this.type == "stem") {
             this.femNut.material = this.defMat;
             this.maleNut.material = this.defMat;
         }
         
-        // create edges
+        // Create edges
         this.mesh.enableEdgesRendering();
         this.mesh.edgesWidth = 2.0;
         this.mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);
         
-        // create outline
+        // Create outline
         const showOutline = false;
         if (showOutline) {
             this.mesh.renderOutline = true;
@@ -355,9 +355,9 @@ class Component {
         }
     }
 
-    // updates component visuals
+    // Updates component visuals
     updateVisuals() {
-        // materials
+        // Materials
         if (this.selected) {
             this.mesh.material = this.selMat;
             for (let i = 0; i < this.elements.length; i++) {
@@ -393,12 +393,12 @@ class Component {
             }
         }
 
-        // connections
+        // Connections
         for (let i = 0; i < this.connections.length; i++) {
             this.connections[i].updateVisuals();
         }
 
-        // nuts (for stems)
+        // Nuts (for stems)
         if (this.type == "stem") {
             this.femNut.isVisible = true;
             this.maleNut.isVisible = true;
@@ -412,9 +412,9 @@ class Component {
         }
     }
 
-    // set up component controls & responses
+    // Set up component controls & responses
     setupControls() {
-        // create gizmos
+        // Create gizmos
         this.dxGizmo = new BABYLON.AxisDragGizmo(new BABYLON.Vector3(1, 0, 0), this.xCol);
         this.dyGizmo = new BABYLON.AxisDragGizmo(new BABYLON.Vector3(0, 1, 0), this.yCol);
         this.dzGizmo = new BABYLON.AxisDragGizmo(new BABYLON.Vector3(0, 0, 1), this.zCol);
@@ -422,7 +422,7 @@ class Component {
         this.ryGizmo = new BABYLON.PlaneRotationGizmo(new BABYLON.Vector3(0, 1, 0), this.yCol);
         this.rzGizmo = new BABYLON.PlaneRotationGizmo(new BABYLON.Vector3(0, 0, 1), this.zCol);
 
-        // adjust gizmo snap distance
+        // Adjust gizmo snap distance
         this.dxGizmo.snapDistance = this.snapDist;
         this.dyGizmo.snapDistance = this.snapDist;
         this.dzGizmo.snapDistance = this.snapDist;
@@ -430,7 +430,7 @@ class Component {
         this.ryGizmo.snapDistance = this.snapRot*Math.PI/180;
         this.rzGizmo.snapDistance = this.snapRot*Math.PI/180;
 
-        // maintain global axes for gizmo orientation
+        // Maintain global axes for gizmo orientation
         this.dxGizmo.updateGizmoRotationToMatchAttachedMesh = false;
         this.dyGizmo.updateGizmoRotationToMatchAttachedMesh = false;
         this.dzGizmo.updateGizmoRotationToMatchAttachedMesh = false;
@@ -438,7 +438,7 @@ class Component {
         this.ryGizmo.updateGizmoRotationToMatchAttachedMesh = false;
         this.rzGizmo.updateGizmoRotationToMatchAttachedMesh = false;
 
-        // update component position & rotation properties per gizmo events FIX!
+        // Update component position & rotation properties per gizmo events FIX!
         this.dxGizmo.onSnapObservable.add(event => {
             this.x += event.snapDistance;
             if (this.collection.type == "tree") {this.collection.log()};
@@ -464,30 +464,30 @@ class Component {
             if (this.collection.type == "tree") {this.collection.log()};
         });
 
-        // hover over component
+        // Hover over component
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this, "hovering", false));
         this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this, "hovering", true));
 
-        // click (select) component
+        // Click (select) component
         this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.manageSelection()}));
     }
 }
 
-// define leaf class (fabric elements)
+// Define leaf class (fabric elements)
 class Leaf extends Component {
     constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], lenX, lenY) {
         super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
-        // initialize properties
-        this.type = "leaf"; // component type
-        this.lenX = lenX; // leaf length in x-dir
-        this.lenY = lenY; // leaf length in y-dir
+        // Initialize properties
+        this.type = "leaf"; // Component type
+        this.lenX = lenX; // Leaf length in x-dir
+        this.lenY = lenY; // Leaf length in y-dir
 
-        // create mesh
+        // Create mesh
         this.mesh = BABYLON.MeshBuilder.CreatePlane("leaf", {height:lenY, width:lenX, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-        this.mesh.addRotation(-Math.PI/2, 0, 0); // rotate to default orientation
+        this.mesh.addRotation(-Math.PI/2, 0, 0); // Rotate to default orientation
         
-            // create nodes
+            // Create nodes
             const nodeI = new Elements.Node(scene, this, "i", [-lenX/2, lenY/2, 0]);
             this.elements.push(nodeI);
             const nodeJ = new Elements.Node(scene, this, "j", [lenX/2, lenY/2, 0]);
@@ -497,16 +497,16 @@ class Leaf extends Component {
             const nodeL = new Elements.Node(scene, this, "l", [-lenX/2, -lenY/2, 0]);
             this.elements.push(nodeL);
             
-            // create area
+            // Create area
             this.elements.push(new Elements.Area(scene, this, "ijkl", nodeI, nodeJ, nodeK, nodeL, 0.05));
             
-        // create connections
+        // Create connections
         const right = new Connections.Edge(scene, this, "right", [lenX/2, 0, 0, 0, 0, 0], lenY);
         const top = new Connections.Edge(scene, this, "top", [0, lenY/2, 0, 0, 0, 90], lenX);
         const left = new Connections.Edge(scene, this, "left", [-lenX/2, 0, 0, 0, 0, 0], lenY);
         const bottom = new Connections.Edge(scene, this, "bottom", [0, -lenY/2, 0, 0, 0, 90], lenX);
         
-            // create monitors
+            // Create monitors
             const ne = BABYLON.MeshBuilder.CreateBox("ne", {size:this.monitorSize});
             ne.translate(new BABYLON.Vector3(lenX/2, lenY/2, 0), 1, BABYLON.Space.WORLD);
             ne.isVisible = false;
@@ -520,7 +520,7 @@ class Leaf extends Component {
             sw.translate(new BABYLON.Vector3(-lenX/2, -lenY/2, 0), 1, BABYLON.Space.WORLD);
             sw.isVisible = false;
 
-            // assign monitors to connections
+            // Assign monitors to connections
             right.monitors = [se, ne];
             top.monitors = [ne, nw];
             left.monitors = [nw, sw];
@@ -528,7 +528,7 @@ class Leaf extends Component {
 
         this.connections = [right, top, left, bottom];
 
-        // bounding box
+        // Bounding box
         const rectBB = [
             new BABYLON.Vector3(-lenX/2+this.BBOffset, 0, lenY/2-this.BBOffset),
             new BABYLON.Vector3(lenX/2-this.BBOffset, 0, lenY/2-this.BBOffset),
@@ -543,44 +543,44 @@ class Leaf extends Component {
         leafBB.isVisible = false;
         this.BB.push(leafBB);
         
-        // set parents
+        // Set parents
         this.parentConnections();
         this.parentBB();
         this.parentElements();
 
-        // set starting position & rotation
+        // Set starting position & rotation
         this.move(x, y, z);
         this.rotate(ax, ay, az);
 
-        // set up visuals & controls
+        // Set up visuals & controls
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
-        this.inclGizmos = [true, true, true, false, false, true]; // array of which gizmos to include [dx, dy, dz, rx, ry, rz]
+        this.inclGizmos = [true, true, true, false, false, true]; // Array of which gizmos to include [dx, dy, dz, rx, ry, rz]
     }
 }
 
-// define stem class (rods for connections or as frames)
+// Define stem class (rods for connections or as frames)
 class Stem extends Component {
     constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], angleBend, lenStem, radStem, radFill, radConn, lenConn, thickBT, reflected, numArcPts, numFillPts) {
         super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
         
-        // initialize properties
-        this.type = "stem"; // component type
-        this.angleBend = angleBend; // stem bend angle (in degrees)
-        this.lenStem = lenStem; // stem length from conn. to conn.
-        this.radStem = radStem; // outer radius of stem tube
-        this.radFill = radFill; // fillet radius of stem bend
-        this.radConn = radConn; // radius of connection
-        this.lenConn = lenConn; // length of connection
-        this.thickBT = thickBT; // thickness of branches & trunk ribs in the collection
-        this.reflected = reflected; // toggle for if stem is reflected along longitudinal axis
+        // Initialize properties
+        this.type = "stem"; // Component type
+        this.angleBend = angleBend; // Stem bend angle (in degrees)
+        this.lenStem = lenStem; // Stem length from conn. to conn.
+        this.radStem = radStem; // Outer radius of stem tube
+        this.radFill = radFill; // Fillet radius of stem bend
+        this.radConn = radConn; // Radius of connection
+        this.lenConn = lenConn; // Length of connection
+        this.thickBT = thickBT; // Thickness of branches & trunk ribs in the collection
+        this.reflected = reflected; // Toggle for if stem is reflected along longitudinal axis
         this.numArcPts = numArcPts; // # of points defining circle arc resolution
         this.numFillPts = numFillPts; // # of points defining fillet arc resolution
 
-        // create tube
+        // Create tube
         const tubePath = [new BABYLON.Vector3(0, 0, 0)];
-        for (let i = 0; i <= numFillPts; i++) { // fillet arc
+        for (let i = 0; i <= numFillPts; i++) { // Fillet arc
             tubePath.push(new BABYLON.Vector3(lenStem/2-radFill*Math.tan(angleBend*Math.PI/360)+radFill*Math.sin(i*angleBend*Math.PI/180/numFillPts), 0, 
                 radFill*(1-Math.cos(i*angleBend*Math.PI/180/numFillPts))));
         }
@@ -592,7 +592,7 @@ class Stem extends Component {
         var tube = BABYLON.MeshBuilder.CreateTube("tube", {path:tubePath, radius:radStem, tessellation:numArcPts, cap:tubeCap, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
             
-            // create nodes
+            // Create nodes
             const nodeI = new Elements.Node(scene, this, "i", [0, 0, 0]);
             this.elements.push(nodeI);
             const nodeJ = new Elements.Node(scene, this, "j", [lenStem/2, 0, 0]);
@@ -600,7 +600,7 @@ class Stem extends Component {
             const nodeK = new Elements.Node(scene, this, "k", [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)]);
             this.elements.push(nodeK);
 
-            // bounding boxes
+            // Bounding boxes
             const rectBB = [
                 new BABYLON.Vector3(-radStem+this.BBOffset/2, 0, -radStem+this.BBOffset/2),
                 new BABYLON.Vector3(-radStem+this.BBOffset/2, 0, radStem-this.BBOffset/2),
@@ -614,7 +614,7 @@ class Stem extends Component {
                 postOffset = -1.5*this.BBOffset;
             }
 
-                // pre fillet bounding box
+                // Pre fillet bounding box
                 const preBB = BABYLON.MeshBuilder.ExtrudePolygon("preBB", {shape:rectBB, 
                     depth:lenStem/2+preOffset, 
                     sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
@@ -623,7 +623,7 @@ class Stem extends Component {
                 preBB.isVisible = false;
                 this.BB.push(preBB);
 
-                // fillet bounding box
+                // Fillet bounding box
                 if (angleBend != 0) {
                     const fillBB = BABYLON.MeshBuilder.ExtrudePolygon("fillBB", {shape:rectBB, 
                         depth:2*radFill*Math.sin(angleBend*Math.PI/360), 
@@ -635,7 +635,7 @@ class Stem extends Component {
                     this.BB.push(fillBB);
                 }
 
-                // post fillet bounding box
+                // Post fillet bounding box
                 const postBB = BABYLON.MeshBuilder.ExtrudePolygon("postBB", {shape:rectBB, 
                     depth:lenStem/2+postOffset, 
                     sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
@@ -645,7 +645,7 @@ class Stem extends Component {
                 postBB.isVisible = false;
                 this.BB.push(postBB);
 
-        // create male mesh
+        // Create male mesh
         let maleConnPath = [
             new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)),
             new BABYLON.Vector3((lenStem/2)+(lenStem/2+lenConn)*(Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180))
@@ -659,7 +659,7 @@ class Stem extends Component {
         var maleConn = BABYLON.MeshBuilder.CreateTube("maleConn", {path:maleConnPath, radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
-        // create female mesh
+        // Create female mesh
         let femConnPath = [
             new BABYLON.Vector3(0, 0, 0),
             new BABYLON.Vector3(lenConn, 0, 0)
@@ -673,7 +673,7 @@ class Stem extends Component {
         var femConn = BABYLON.MeshBuilder.CreateTube("femConn", {path:femConnPath, radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
-        // create cap (on female end)
+        // Create cap (on female end)
         const circle = Geometry.pillShape(radStem, 0, 0, 0, numArcPts);
         const hole = [Geometry.pillShape(radConn, 0, 0, 0, numArcPts)];
         var cap = BABYLON.MeshBuilder.ExtrudePolygon("cap", {shape:circle, holes:hole, 
@@ -685,11 +685,11 @@ class Stem extends Component {
             cap.addRotation(-angleBend*Math.PI/180, 0, 0);
         }
 
-        // merge meshes
+        // Merge meshes
         this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn, femConn, cap], true, true, undefined, false, false);
-        this.mesh.addRotation(-Math.PI/2, Math.PI/2, Math.PI); // rotate to default orientation
+        this.mesh.addRotation(-Math.PI/2, Math.PI/2, Math.PI); // Rotate to default orientation
         
-        // create stem connections
+        // Create stem connections
         const offset = 0.005;
         let femPosi = [0, 0, 0, 0, 0, -90];
         let femPoso = [lenConn, 0, 0];
@@ -706,7 +706,7 @@ class Stem extends Component {
         const femStem = new Connections.Joint(scene, this, "femStem", femPosi, radStem+offset, lenConn, numArcPts);
         const maleStem = new Connections.Joint(scene, this, "maleStem", malePosi, radStem+offset, lenConn, numArcPts);
 
-            // create monitors
+            // Create monitors
             let fi = BABYLON.MeshBuilder.CreateBox("fi", {size:this.monitorSize});
             fi.translate(new BABYLON.Vector3(femPosi[0], femPosi[1], femPosi[2]), 1, BABYLON.Space.WORLD);
             fi.isVisible = false;
@@ -720,13 +720,13 @@ class Stem extends Component {
             mo.translate(new BABYLON.Vector3(malePoso[0], malePoso[1], malePoso[2]), 1, BABYLON.Space.WORLD);
             mo.isVisible = false;
 
-            // assign monitors to connections
+            // Assign monitors to connections
             femStem.monitors = [fi, fo];
             maleStem.monitors = [mi, mo];
         
         this.connections = [femStem, maleStem];
 
-            // create nuts
+            // Create nuts
             const radNut = 0.375;
             const femNutCapPath = [
                 new BABYLON.Vector3(femPosi[0], femPosi[1], femPosi[2]),
@@ -748,9 +748,9 @@ class Stem extends Component {
             this.maleNut = BABYLON.MeshBuilder.CreateTube("maleNut", {path:maleNutPath, radius:radNut, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
                 sideOrientation:BABYLON.Mesh.DOUBLESIDE});
             
-        // create branch/trunk connections
+        // Create branch/trunk connections
 
-            // initialize variables
+            // Initialize variables
             let spaceRem = lenStem/2-radFill*Math.tan(angleBend*Math.PI/360);
             let i = 1;
             let radFrame = 0.125;
@@ -759,7 +759,7 @@ class Stem extends Component {
             let prevIJ = nodeI;
             let prevJK = nodeK;
             
-            // add connections
+            // Add connections
             while (spaceRem >= thickBT) {
                 femPosi = [(i-1)*thickBT, 0, 0, 0, 0, -90];
                 let femPosii = [i*thickBT, 0, 0];
@@ -774,7 +774,7 @@ class Stem extends Component {
                 const femBT = new Connections.Joint(scene, this, "femBT", femPosi, radStem+offset/2, thickBT, numArcPts);
                 const maleBT = new Connections.Joint(scene, this, "maleBT", malePosi, radStem+offset/2, thickBT, numArcPts);
                 
-                    // create monitors
+                    // Create monitors
                     const fii = BABYLON.MeshBuilder.CreateBox("fii", {size:this.monitorSize});
                     fii.translate(new BABYLON.Vector3(femPosii[0], femPosii[1], femPosii[2]), 1, BABYLON.Space.WORLD);
                     fii.isVisible = false;
@@ -782,22 +782,22 @@ class Stem extends Component {
                     mii.translate(new BABYLON.Vector3(malePosii[0], malePosii[1], malePosii[2]), 1, BABYLON.Space.WORLD);
                     mii.isVisible = false;
 
-                    // assign monitors to connections
+                    // Assign monitors to connections
                     femBT.monitors = [fi, fii];
                     maleBT.monitors = [mi, mii];
 
-                    // create nodes
+                    // Create nodes
                     nodeIJ = new Elements.Node(scene, this, "ij", [(i-1)*thickBT+thickBT/2, 0, 0]);
                     this.elements.push(nodeIJ);
                     nodeJK = new Elements.Node(scene, this, "jk", [(lenStem/2)+(lenStem/2-i*thickBT+thickBT/2)*Math.cos(angleBend*Math.PI/180), 0, 
                         (lenStem/2-i*thickBT+thickBT/2)*Math.sin(angleBend*Math.PI/180)]);
                     this.elements.push(nodeJK);
 
-                    // create frames
+                    // Create frames
                     this.elements.push(new Elements.Frame(scene, this, "ij", prevIJ, nodeIJ, radFrame, 1, 1, 1, 1)); // TO-DO update properties
                     this.elements.push(new Elements.Frame(scene, this, "jk", prevJK, nodeJK, radFrame, 1, 1, 1, 1)); // TO-DO update properties
                 
-                // update variables
+                // Update variables
                 this.connections.push(femBT);
                 this.connections.push(maleBT);
                 mi = mii;
@@ -808,50 +808,50 @@ class Stem extends Component {
                 i++;
             }
 
-                    // create remaining frames
+                    // Create remaining frames
                     this.elements.push(new Elements.Frame(scene, this, "ij", prevIJ, nodeJ, radFrame, 1, 1, 1, 1)); // TO-DO update properties
                     this.elements.push(new Elements.Frame(scene, this, "jk", prevJK, nodeJ, radFrame, 1, 1, 1, 1)); // TO-DO update properties
 
-        // set parents
+        // Set parents
         this.parentConnections();
             this.femNut.parent = this.mesh;
             this.maleNut.parent = this.mesh;
         this.parentBB();
         this.parentElements();
 
-        // set starting position & rotation
+        // Set starting position & rotation
         this.move(x, y, z);
         this.rotate(ax, ay, az);
 
-        // set up visuals & controls
+        // Set up visuals & controls
         this.setupVisuals();
         this.mesh.disableEdgesRendering();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
-        this.inclGizmos = [true, true, true, true, false, false]; // array of which gizmos to include [dx, dy, dz, rx, ry, rz]
+        this.inclGizmos = [true, true, true, true, false, false]; // Array of which gizmos to include [dx, dy, dz, rx, ry, rz]
     }
 }
 
-// define branch class (frame members with holes & slots)
+// Define branch class (frame members with holes & slots)
 class Branch extends Component {
     constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, reflected, numArcPts) {
         super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
-        // initialize properties
-        this.type = "branch"; // component type
-        this.lenBranch = lenBranch; // branch length from end hole to end hole
-        this.thickBranch = thickBranch; // branch thickness
-        this.radBranch = radBranch; // outer radius of branch profile
-        this.radHole = radHole; // radius of holes
-        this.spacHole = spacHole; // center-to-center spacing between holes
-        this.lenSlot = lenSlot; // max length of slot hole
-        this.reflected = reflected; // toggle for if branch is reflected along perpendicular axis (ends flipped)
+        // Initialize properties
+        this.type = "branch"; // Component type
+        this.lenBranch = lenBranch; // Branch length from end hole to end hole
+        this.thickBranch = thickBranch; // Branch thickness
+        this.radBranch = radBranch; // Outer radius of branch profile
+        this.radHole = radHole; // Radius of holes
+        this.spacHole = spacHole; // Center-to-center spacing between holes
+        this.lenSlot = lenSlot; // Max length of slot hole
+        this.reflected = reflected; // Toggle for if branch is reflected along perpendicular axis (ends flipped)
         this.numArcPts = numArcPts; // # of points defining circle arc resolution
 
-        // create profile shape
+        // Create profile shape
         const profile = Geometry.pillShape(radBranch, lenBranch, 0, 0, numArcPts);
 
-            // above holes bounding box
+            // Above holes bounding box
             const above = [
                 new BABYLON.Vector3(0, 0, radBranch-this.BBOffset),
                 new BABYLON.Vector3(lenBranch, 0, radBranch-this.BBOffset),
@@ -865,7 +865,7 @@ class Branch extends Component {
             aboveBB.isVisible = false;
             this.BB.push(aboveBB);
 
-            // below holes bounding box
+            // Below holes bounding box
             const below = [
                 new BABYLON.Vector3(0, 0, -radBranch+this.BBOffset),
                 new BABYLON.Vector3(lenBranch, 0, -radBranch+this.BBOffset),
@@ -879,20 +879,20 @@ class Branch extends Component {
             belowBB.isVisible = false;
             this.BB.push(belowBB);
 
-        // create hole shapes
+        // Create hole shapes
         const holes = [];
 
-            // left circle hole is local origin
+            // Left circle hole is local origin
             const leftHole = Geometry.pillShape(radHole, 0, 0, 0, numArcPts);
             holes.push(leftHole);
-                // create node
+                // Create node
                 const nodeI = new Elements.Node(scene, this, "i", [0, -thickBranch/2, 0]);
                 this.elements.push(nodeI);
 
-                // create connection
+                // Create connection
                 const leftConn = new Connections.Joint(scene, this, "left", [0, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts);
 
-                    // create monitors
+                    // Create monitors
                     const mL0 = BABYLON.MeshBuilder.CreateBox("mL0", {size:this.monitorSize});
                     mL0.translate(new BABYLON.Vector3(0, 0, 0), 1, BABYLON.Space.WORLD);
                     mL0.isVisible = false;
@@ -903,7 +903,7 @@ class Branch extends Component {
                 
                 this.connections.push(leftConn);
 
-                // left of holes bounding box
+                // Left of holes bounding box
                 const left = [
                     new BABYLON.Vector3(-radBranch+this.BBOffset, 0, radHole+this.BBOffset),
                     new BABYLON.Vector3(-radHole-this.BBOffset, 0, radHole+this.BBOffset),
@@ -917,7 +917,7 @@ class Branch extends Component {
                 leftBB.isVisible = false;
                 this.BB.push(leftBB);
 
-            // process slot lengths
+            // Process slot lengths
             let spacRem = lenBranch-2*spacHole;
             const tempLengths = [];
             while (spacRem > lenSlot) {
@@ -930,16 +930,16 @@ class Branch extends Component {
                 lengths = tempLengths.reverse();
             }
 
-            // slot holes
+            // Slot holes
             let startSlot = spacHole;
             for (let i = 0; i < lengths.length; i++) {
                 const slotHole = Geometry.pillShape(radHole, lengths[i], startSlot, 0, numArcPts);
                 holes.push(slotHole);
 
-                // create connection
+                // Create connection
                 this.connections.push(new Connections.Slot(scene, this, i.toString(), [startSlot, 0, 0, 0, 0, 0], radHole, lengths[i], thickBranch, numArcPts));
                 
-                // between holes bounding box
+                // Between holes bounding box
                 const btwn = [
                     new BABYLON.Vector3(startSlot-spacHole+radHole+this.BBOffset, 0, radHole+this.BBOffset),
                     new BABYLON.Vector3(startSlot-radHole-this.BBOffset, 0, radHole+this.BBOffset),
@@ -956,7 +956,7 @@ class Branch extends Component {
                 startSlot += lengths[i]+spacHole;
             }
 
-                // right of final slot bounding box
+                // Right of final slot bounding box
                 const finSlotR = [
                     new BABYLON.Vector3(lenBranch-spacHole+radHole+this.BBOffset, 0, radHole+this.BBOffset),
                     new BABYLON.Vector3(lenBranch-radHole-this.BBOffset, 0, radHole+this.BBOffset),
@@ -970,17 +970,17 @@ class Branch extends Component {
                 finSlotRBB.isVisible = false;
                 this.BB.push(finSlotRBB);
 
-            // right circle hole
+            // Right circle hole
             const rightHole = Geometry.pillShape(radHole, 0, lenBranch, 0, numArcPts);
             holes.push(rightHole);
-                // create node
+                // Create node
                 const nodeJ = new Elements.Node(scene, this, "j", [lenBranch, -thickBranch/2, 0]);
                 this.elements.push(nodeJ);
 
-                // create connection
+                // Create connection
                 const rightConn = new Connections.Joint(scene, this, "right", [lenBranch, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts);
                 
-                    // create monitors
+                    // Create monitors
                     const mR0 = BABYLON.MeshBuilder.CreateBox("mR0", {size:this.monitorSize});
                     mR0.translate(new BABYLON.Vector3(lenBranch, 0, 0), 1, BABYLON.Space.WORLD);
                     mR0.isVisible = false;
@@ -991,7 +991,7 @@ class Branch extends Component {
                 
                 this.connections.push(rightConn);
 
-                // right of holes bounding box
+                // Right of holes bounding box
                 const right = [
                     new BABYLON.Vector3(lenBranch+radHole+this.BBOffset, 0, radHole+this.BBOffset),
                     new BABYLON.Vector3(lenBranch+radBranch-this.BBOffset, 0, radHole+this.BBOffset),
@@ -1005,54 +1005,54 @@ class Branch extends Component {
                 rightBB.isVisible = false;
                 this.BB.push(rightBB);
 
-        // extrude & create mesh
+        // Extrude & create mesh
         this.mesh = BABYLON.MeshBuilder.ExtrudePolygon("branch", {shape:profile, holes:holes, 
             depth:thickBranch,
             sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
-        this.mesh.addRotation(-Math.PI/2, 0, 0); // rotate to default orientation
-                // create frame
+        this.mesh.addRotation(-Math.PI/2, 0, 0); // Rotate to default orientation
+                // Create frame
                 this.elements.push(new Elements.Frame(scene, this, "ij", nodeI, nodeJ, 0.25, 1, 1, 1, 1)); // TO-DO update properties
 
-        // set parents
+        // Set parents
         this.parentConnections();
         this.parentBB();
         this.parentElements();
 
-        // set starting position & rotation
+        // Set starting position & rotation
         this.move(x, y, z);
         this.rotate(ax, ay, az);
 
-        // set up visuals & controls
+        // Set up visuals & controls
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
-        this.inclGizmos = [true, true, true, false, false, true]; // array of which gizmos to include [dx, dy, dz, rx, ry, rz]
+        this.inclGizmos = [true, true, true, false, false, true]; // Array of which gizmos to include [dx, dy, dz, rx, ry, rz]
     }
 }
 
-// define trunk class (plank tiles with holed ribs)
+// Define trunk class (plank tiles with holed ribs)
 class Trunk extends Component {
     constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, reflected, numArcPts) {
         super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
-        // initialize properties
-        this.type = "trunk"; // component type
-        this.lenTrunk = lenTrunk; // trunk length from end hole to end hole
-        this.lenTile = lenTrunk+2*(2*radRib+overhang); // tile length
-        this.widthTile = widthTile; // tile width
-        this.thickTile = thickTile; // tile thickness
+        // Initialize properties
+        this.type = "trunk"; // Component type
+        this.lenTrunk = lenTrunk; // Trunk length from end hole to end hole
+        this.lenTile = lenTrunk+2*(2*radRib+overhang); // Tile length
+        this.widthTile = widthTile; // Tile width
+        this.thickTile = thickTile; // Tile thickness
         this.numRibs = numRibs; // # of ribs
-        this.thickRib = thickRib; // rib thickness
-        this.radRib = radRib; // outer radius of rib profile
-        this.spacRib = spacRib; // clear spacing between ribs
-        this.edgeRib = edgeRib; // tile side edge distance before first rib (if not reflected)
-        this.radHole = radHole; // radius of holes
-        this.spacHole = spacHole; // center-to-center spacing between holes
-        this.reflected = reflected; // toggle for if trunk is reflected along longitudinal axis
-        this.overhang = overhang; // tile end edge distance overhanging rib end
+        this.thickRib = thickRib; // Rib thickness
+        this.radRib = radRib; // Outer radius of rib profile
+        this.spacRib = spacRib; // Clear spacing between ribs
+        this.edgeRib = edgeRib; // Tile side edge distance before first rib (if not reflected)
+        this.radHole = radHole; // Radius of holes
+        this.spacHole = spacHole; // Center-to-center spacing between holes
+        this.reflected = reflected; // Toggle for if trunk is reflected along longitudinal axis
+        this.overhang = overhang; // Tile end edge distance overhanging rib end
         this.numArcPts = numArcPts; // # of points defining circle arc resolution
 
-        const edgeRibLast = widthTile-edgeRib-numRibs*thickRib-(numRibs-1)*spacRib; // tile side edge distance after last rib (if not reflected)
+        const edgeRibLast = widthTile-edgeRib-numRibs*thickRib-(numRibs-1)*spacRib; // Tile side edge distance after last rib (if not reflected)
         let edgeRibFirst = edgeRib;
         if (reflected == 1) {
             edgeRibFirst = edgeRibLast;
@@ -1060,7 +1060,7 @@ class Trunk extends Component {
 
         const meshes = [];
 
-        // create tile
+        // Create tile
         const rect = [
             new BABYLON.Vector3(-2*radRib-overhang, 0, 0),
             new BABYLON.Vector3(-2*radRib-overhang+this.lenTile, 0, 0),
@@ -1074,7 +1074,7 @@ class Trunk extends Component {
         tile.translate(new BABYLON.Vector3(0, 0, 2*radRib), 1, BABYLON.Space.WORLD);
         meshes.push(tile);
 
-            // tile bounding box
+            // Tile bounding box
             const rectBB = [
                 new BABYLON.Vector3(-2*radRib-overhang+this.BBOffset, 0, this.BBOffset),
                 new BABYLON.Vector3(-2*radRib-overhang+this.lenTile-this.BBOffset, 0, this.BBOffset),
@@ -1089,44 +1089,44 @@ class Trunk extends Component {
             tileBB.isVisible = false;
             this.BB.push(tileBB);
 
-        // create ribs
+        // Create ribs
         for (let j = 0; j < numRibs; j++) {
             const profile = [];
 
-            // top left quarter-circle
+            // Top left quarter-circle
             for (let i = 0; i <= numArcPts/4; i++) {
                 profile.push(new BABYLON.Vector3(radRib*(-2+Math.sin(i*2*Math.PI/numArcPts)), 0, radRib*Math.cos(i*2*Math.PI/numArcPts)));
             }
             
-            // bottom left quarter-circle
+            // Bottom left quarter-circle
             for (let i = 1; i <= numArcPts/4; i++) {
                 profile.push(new BABYLON.Vector3(-radRib*Math.cos(i*2*Math.PI/numArcPts), 0, -radRib*Math.sin(i*2*Math.PI/numArcPts)));
             }
 
-            // flat edge
+            // Flat edge
             profile.push(new BABYLON.Vector3(lenTrunk, 0, -radRib));
 
-            // bottom right quarter-circle
+            // Bottom right quarter-circle
             for (let i = 1; i <= numArcPts/4; i++) {
                 profile.push(new BABYLON.Vector3(lenTrunk+radRib*Math.sin(i*2*Math.PI/numArcPts), 0, -radRib*Math.cos(i*2*Math.PI/numArcPts)));
             }
 
-            // top right quarter-circle
+            // Top right quarter-circle
             for (let i = 1; i <= numArcPts/4; i++) {
                 profile.push(new BABYLON.Vector3(lenTrunk+radRib*(2-Math.cos(i*2*Math.PI/numArcPts)), 0, radRib*Math.sin(i*2*Math.PI/numArcPts)));
             }
 
-            // holes
+            // Holes
             const holes = [];
             let k = 0;
             for (let i = 0; i <= lenTrunk; i += spacHole) {
                 const hole = Geometry.pillShape(radHole, 0, i, 0, numArcPts);
                 holes.push(hole);
 
-                // create connection
+                // Create connection
                 const holeConn = new Connections.Joint(scene, this, j.toString+","+k.toString(), [i, -edgeRibFirst-thickRib-j*(thickRib+spacRib), 0, 0, 0, 0], radHole, thickRib, numArcPts);
 
-                    // create monitors
+                    // Create monitors
                     const m0 = BABYLON.MeshBuilder.CreateBox("m0", {size:this.monitorSize});
                     m0.translate(new BABYLON.Vector3(i, -edgeRibFirst-j*(thickRib+spacRib), 0), 1, BABYLON.Space.WORLD);
                     m0.isVisible = false;
@@ -1139,15 +1139,15 @@ class Trunk extends Component {
                 k++;
             }
 
-            // extrude & create mesh
+            // Extrude & create mesh
             const rib = BABYLON.MeshBuilder.ExtrudePolygon("rib", {shape:profile, holes:holes, 
                 depth:thickRib, 
                 sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
             rib.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib), 0), 1, BABYLON.Space.WORLD);
             meshes.push(rib);
 
-                // rib bounding boxes
-                    // above holes
+                // Rib bounding boxes
+                    // Above holes
                     const above = [
                         new BABYLON.Vector3(-radRib+this.BBOffset, 0, radRib),
                         new BABYLON.Vector3(lenTrunk+radRib-this.BBOffset, 0, radRib),
@@ -1161,7 +1161,7 @@ class Trunk extends Component {
                     aboveBB.isVisible = false;
                     this.BB.push(aboveBB);
 
-                    // below holes
+                    // Below holes
                     const below = [
                         new BABYLON.Vector3(-radRib+this.BBOffset, 0, -radRib+this.BBOffset),
                         new BABYLON.Vector3(lenTrunk+radRib-this.BBOffset, 0, -radRib+this.BBOffset),
@@ -1175,7 +1175,7 @@ class Trunk extends Component {
                     belowBB.isVisible = false;
                     this.BB.push(belowBB);
 
-                    // left of holes
+                    // Left of holes
                     const left = [
                         new BABYLON.Vector3(-radRib+this.BBOffset, 0, radHole+this.BBOffset),
                         new BABYLON.Vector3(-radHole-this.BBOffset, 0, radHole+this.BBOffset),
@@ -1189,7 +1189,7 @@ class Trunk extends Component {
                     leftBB.isVisible = false;
                     this.BB.push(leftBB);
 
-                    // between holes
+                    // Between holes
                     for (let i = 0; i < lenTrunk; i += spacHole) {
                         const btwn = [
                             new BABYLON.Vector3(i+radHole+this.BBOffset, 0, radHole+this.BBOffset),
@@ -1205,7 +1205,7 @@ class Trunk extends Component {
                         this.BB.push(btwnBB);
                     }
 
-                    // right of holes
+                    // Right of holes
                     const right = [
                         new BABYLON.Vector3(lenTrunk+radHole+this.BBOffset, 0, radHole+this.BBOffset),
                         new BABYLON.Vector3(lenTrunk+radRib-this.BBOffset, 0, radHole+this.BBOffset),
@@ -1220,24 +1220,24 @@ class Trunk extends Component {
                     this.BB.push(rightBB);
         }
 
-        // merge meshes
+        // Merge meshes
         this.mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true, undefined, false, false);
-        this.mesh.addRotation(-Math.PI/2, 0, 0); // rotate to default orientation
+        this.mesh.addRotation(-Math.PI/2, 0, 0); // Rotate to default orientation
 
-        // set parents
+        // Set parents
         this.parentConnections();
         this.parentBB();
         this.parentElements();
 
-        // set starting position & rotation
+        // Set starting position & rotation
         this.move(x, y, z);
         this.rotate(ax, ay, az);
 
-        // set up visuals & controls
+        // Set up visuals & controls
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
-        this.inclGizmos = [true, true, true, false, false, true]; // array of which gizmos to include [dx, dy, dz, rx, ry, rz]
+        this.inclGizmos = [true, true, true, false, false, true]; // Array of which gizmos to include [dx, dy, dz, rx, ry, rz]
     }
 }
 

@@ -100,18 +100,6 @@ const Scene = () => {
 
     window.addEventListener('loadFile', handleLoadFile);
 
-    /*
-    // Create test almanac
-    let almanac = new Collections.Almanac(scene, numArcPts, numFillPts);
-    //almanac.generateLeaves([0, 0, 0], [2, 2, 12], [2, 2, 12]);
-    //almanac.generateStems([0, 0, 0], [0, 45, 90], [2, 2, 8], radStem, radFill, radConn, lenConn, thickBranch);
-    //almanac.generateBranches([0, 0, 0], [2, 2, 30], thickBranch, radBranch, radHole, spacHole, lenSlot);
-    //almanac.generateTrunks([0, 0, 0], [3, 1, 6], [6, 2, 18], thickTile, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang);
-    scene.registerBeforeRender(function() {
-      almanac.updateVisuals();
-    });
-    */
-
     // Render loop
     engine.runRenderLoop(() => {
       scene.render();
