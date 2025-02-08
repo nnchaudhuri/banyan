@@ -1,3 +1,15 @@
+:root {
+  --background-color: rgb(255, 255, 255);
+  --hover-color: rgb(235, 235, 235);
+  --border-color: rgb(235, 235, 235);
+  --padding: 4px 6px;
+  --border-radius: 6px;
+  --text-color: black;
+  --tile-width: 50px;
+  --margin: 5px;
+  --tile-wide-width: 110px;
+}
+
 html, body {
   height: 100%;
   width: 100%;
@@ -18,20 +30,29 @@ html, body {
 }
 
 .button {
-  background-color: rgb(255, 255, 255);
-  color: black;
-  border: 1px solid rgb(235, 235, 235);
-  padding: 4px 6px;
-  border-radius: 6px;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  padding: var(--padding);
+  border-radius: var(--border-radius);
   text-align: center;
-  margin: 5px;
+  margin: var(--margin);
 }
 
 .button:hover {
-  background-color: rgb(235, 235, 235);
+  background-color: var(--hover-color);
 }
 
 .button-wide {
-  width: 110px;
+  width: var(--tile-wide-width);
   grid-column: span 2;
+}
+
+.int-input {
+  width: var(--tile-width);
+  padding: var(--padding);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  text-align: center;
+  margin: --margin;
 }
