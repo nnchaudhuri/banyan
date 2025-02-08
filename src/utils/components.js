@@ -11,12 +11,12 @@ class Component {
         this.scene = scene; // Scene hosting component
         this.collection = collection; // Collection the component is a part of
         this.ID = null; // Initialize null component ID
-        this.x = 0; // X position (of local origin), initialize to 0 as specific components set starting position & rotation
-        this.y = 0; // Y position (of local origin), initialize to 0 as specific components set starting position & rotation
-        this.z = 0; // Z position (of local origin), initialize to 0 as specific components set starting position & rotation
-        this.ax = 0; // X rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
-        this.ay = 0; // Y rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
-        this.az = 0; // Z rotation (in degrees, about local origin), initialize to 0 as specific components set starting position & rotation
+        this.x = 0; // X position (of local origin), initialize to 0 (set later)
+        this.y = 0; // Y position (of local origin), initialize to 0 (set later)
+        this.z = 0; // Z position (of local origin), initialize to 0 (set later)
+        this.ax = 0; // X rotation (in degrees, about local origin), initialize to 0 (set later)
+        this.ay = 0; // Y rotation (in degrees, about local origin), initialize to 0 (set later)
+        this.az = 0; // Z rotation (in degrees, about local origin), initialize to 0 (set later)
         this.type = null; // Initialize null component type
         this.mesh = null; // Initialize null mesh
         this.structureMode = false; // Toggle for structural analysis mode
@@ -32,7 +32,7 @@ class Component {
         this.transparent = false; // Toggle for component transparency
 
         // Initialize gizmos
-        this.inclGizmos = [true, true, true, false, false, false]; // Array of which gizmos to include [dx, dy, dz, rx, ry, rz]
+        this.inclGizmos = [true, true, true, false, false, false]; // [dx, dy, dz, rx, ry, rz]
         this.dxGizmo = null;
         this.dyGizmo = null;
         this.dzGizmo = null;
@@ -216,7 +216,8 @@ class Component {
             for (let i = 0; i < components.length && !found; i++) {
                 const comp = components[i];
                 if (this.ID != comp.ID) {
-                    if ((comp.type == 'leaf' && this.type == 'leaf') || (comp.type != 'leaf' && this.type == 'stem') || (comp.type == 'stem' && this.type != 'leaf')) {
+                    if ((comp.type == 'leaf' && this.type == 'leaf') || (comp.type != 'leaf' 
+                        && this.type == 'stem') || (comp.type == 'stem' && this.type != 'leaf')) {
                         for (let c = 0; c < comp.connections.length && !found; c++) {
                             if (conn.connectable(comp.connections[c])) {
                                 conn.connectedTo = comp.connections[c];
@@ -465,11 +466,14 @@ class Component {
         });
 
         // Hover over component
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this, 'hovering', false));
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this, 'hovering', true));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(
+            BABYLON.ActionManager.OnPointerOutTrigger, this, 'hovering', false));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(
+            BABYLON.ActionManager.OnPointerOverTrigger, this, 'hovering', true));
 
         // Click (select) component
-        this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.manageSelection()}));
+        this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+            BABYLON.ActionManager.OnPickTrigger, event => {this.manageSelection()}));
     }
 }
 
@@ -484,7 +488,8 @@ class Leaf extends Component {
         this.lenY = lenY; // Leaf length in y-dir
 
         // Create mesh
-        this.mesh = BABYLON.MeshBuilder.CreatePlane('leaf', {height:lenY, width:lenX, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        this.mesh = BABYLON.MeshBuilder.CreatePlane('leaf', {height:lenY, width:lenX, 
+            sideOrientation:BABYLON.Mesh.DOUBLESIDE});
         this.mesh.addRotation(-Math.PI/2, 0, 0); // Rotate to default orientation
         
             // Create nodes
@@ -498,7 +503,8 @@ class Leaf extends Component {
             this.elements.push(nodeL);
             
             // Create area
-            this.elements.push(new Elements.Area(scene, this, 'ijkl', nodeI, nodeJ, nodeK, nodeL, 0.05));
+            this.elements.push(new Elements.Area(scene, this, 'ijkl', nodeI, nodeJ, nodeK, nodeL, 
+                0.05));
             
         // Create connections
         const right = new Connections.Edge(scene, this, 'right', [lenX/2, 0, 0, 0, 0, 0], lenY);
@@ -556,13 +562,14 @@ class Leaf extends Component {
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
-        this.inclGizmos = [true, true, true, false, false, true]; // Array of which gizmos to include [dx, dy, dz, rx, ry, rz]
+        this.inclGizmos = [true, true, true, false, false, true]; // [dx, dy, dz, rx, ry, rz]
     }
 }
 
 // Define stem class (rods for connections or as frames)
 class Stem extends Component {
-    constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], angleBend, lenStem, radStem, radFill, radConn, lenConn, thickBT, reflected, numArcPts, numFillPts) {
+    constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], angleBend, lenStem, 
+        radStem, radFill, radConn, lenConn, thickBT, reflected, numArcPts, numFillPts) {
         super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
         
         // Initialize properties
@@ -581,23 +588,26 @@ class Stem extends Component {
         // Create tube
         const tubePath = [new BABYLON.Vector3(0, 0, 0)];
         for (let i = 0; i <= numFillPts; i++) { // Fillet arc
-            tubePath.push(new BABYLON.Vector3(lenStem/2-radFill*Math.tan(angleBend*Math.PI/360)+radFill*Math.sin(i*angleBend*Math.PI/180/numFillPts), 0, 
+            tubePath.push(new BABYLON.Vector3(lenStem/2-radFill*Math.tan(angleBend*Math.PI/360)
+                +radFill*Math.sin(i*angleBend*Math.PI/180/numFillPts), 0, 
                 radFill*(1-Math.cos(i*angleBend*Math.PI/180/numFillPts))));
         }
-        tubePath.push(new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)));
+        tubePath.push(new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, 
+            (lenStem/2)*Math.sin(angleBend*Math.PI/180)));
         let tubeCap = BABYLON.Mesh.CAP_END;
         if (reflected == 1) {
             tubeCap = BABYLON.Mesh.CAP_START;
         }
-        var tube = BABYLON.MeshBuilder.CreateTube('tube', {path:tubePath, radius:radStem, tessellation:numArcPts, cap:tubeCap, 
-            sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        var tube = BABYLON.MeshBuilder.CreateTube('tube', {path:tubePath, radius:radStem, 
+            tessellation:numArcPts, cap:tubeCap, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
             
             // Create nodes
             const nodeI = new Elements.Node(scene, this, 'i', [0, 0, 0]);
             this.elements.push(nodeI);
             const nodeJ = new Elements.Node(scene, this, 'j', [lenStem/2, 0, 0]);
             this.elements.push(nodeJ);
-            const nodeK = new Elements.Node(scene, this, 'k', [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)]);
+            const nodeK = new Elements.Node(scene, this, 'k', [(lenStem/2)*(1
+                +Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)]);
             this.elements.push(nodeK);
 
             // Bounding boxes
@@ -629,7 +639,8 @@ class Stem extends Component {
                         depth:2*radFill*Math.sin(angleBend*Math.PI/360), 
                         sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
                     fillBB.addRotation(0, 0, Math.PI/2);
-                    fillBB.translate(new BABYLON.Vector3(lenStem/2-radFill*Math.tan(angleBend*Math.PI/360), 0, 0), 1, BABYLON.Space.WORLD);
+                    fillBB.translate(new BABYLON.Vector3(lenStem/2-radFill*Math.tan(angleBend
+                        *Math.PI/360), 0, 0), 1, BABYLON.Space.WORLD);
                     fillBB.addRotation(-angleBend*Math.PI/360, 0, 0);
                     fillBB.isVisible = false;
                     this.BB.push(fillBB);
@@ -647,8 +658,10 @@ class Stem extends Component {
 
         // Create male mesh
         let maleConnPath = [
-            new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)),
-            new BABYLON.Vector3((lenStem/2)+(lenStem/2+lenConn)*(Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180))
+            new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)
+                *Math.sin(angleBend*Math.PI/180)),
+            new BABYLON.Vector3((lenStem/2)+(lenStem/2+lenConn)*(Math.cos(angleBend*Math.PI/180)), 
+                0, (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180))
         ];
         if (reflected == 1) {
             maleConnPath = [
@@ -656,7 +669,8 @@ class Stem extends Component {
                 new BABYLON.Vector3(-lenConn, 0, 0)
             ];
         }
-        var maleConn = BABYLON.MeshBuilder.CreateTube('maleConn', {path:maleConnPath, radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, 
+        var maleConn = BABYLON.MeshBuilder.CreateTube('maleConn', {path:maleConnPath, 
+            radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         // Create female mesh
@@ -666,11 +680,14 @@ class Stem extends Component {
         ];
         if (reflected == 1) {
             femConnPath = [
-                new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)),
-                new BABYLON.Vector3((lenStem/2)+(lenStem/2-lenConn)*(Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2-lenConn)*Math.sin(angleBend*Math.PI/180))
+                new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, 
+                    (lenStem/2)*Math.sin(angleBend*Math.PI/180)),
+                new BABYLON.Vector3((lenStem/2)+(lenStem/2-lenConn)*(Math.cos(angleBend
+                    *Math.PI/180)), 0, (lenStem/2-lenConn)*Math.sin(angleBend*Math.PI/180))
             ];
         }
-        var femConn = BABYLON.MeshBuilder.CreateTube('femConn', {path:femConnPath, radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, 
+        var femConn = BABYLON.MeshBuilder.CreateTube('femConn', {path:femConnPath, 
+            radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_END, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         // Create cap (on female end)
@@ -681,12 +698,14 @@ class Stem extends Component {
             sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
         cap.addRotation(0, 0, Math.PI/2);
         if (reflected == 1) {
-            cap.translate(new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)), 1, BABYLON.Space.WORLD);
+            cap.translate(new BABYLON.Vector3((lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 
+                0, (lenStem/2)*Math.sin(angleBend*Math.PI/180)), 1, BABYLON.Space.WORLD);
             cap.addRotation(-angleBend*Math.PI/180, 0, 0);
         }
 
         // Merge meshes
-        this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn, femConn, cap], true, true, undefined, false, false);
+        this.mesh = BABYLON.Mesh.MergeMeshes([tube, maleConn, femConn, cap], true, true, 
+            undefined, false, false);
         this.mesh.addRotation(-Math.PI/2, Math.PI/2, Math.PI); // Rotate to default orientation
         
         // Create stem connections
@@ -694,30 +713,41 @@ class Stem extends Component {
         let femPosi = [0, 0, 0, 0, 0, -90];
         let femPoso = [lenConn, 0, 0];
         let femPosn = [-lenConn, 0, 0];
-        let malePosi = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
-        let malePoso = [(lenStem/2)+(lenStem/2+lenConn)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180)];
+        let malePosi = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)
+            *Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
+        let malePoso = [(lenStem/2)+(lenStem/2+lenConn)*Math.cos(angleBend*Math.PI/180), 0, 
+            (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180)];
         if (reflected == 1) {
-            femPosi = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
-            femPoso = [(lenStem/2)+(lenStem/2-lenConn)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-lenConn)*Math.sin(angleBend*Math.PI/180)];
-            femPosn = [(lenStem/2)+(lenStem/2+lenConn)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180)];
+            femPosi = [(lenStem/2)*(1+Math.cos(angleBend*Math.PI/180)), 0, (lenStem/2)
+                *Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
+            femPoso = [(lenStem/2)+(lenStem/2-lenConn)*Math.cos(angleBend*Math.PI/180), 0, 
+                (lenStem/2-lenConn)*Math.sin(angleBend*Math.PI/180)];
+            femPosn = [(lenStem/2)+(lenStem/2+lenConn)*Math.cos(angleBend*Math.PI/180), 0, 
+                (lenStem/2+lenConn)*Math.sin(angleBend*Math.PI/180)];
             malePosi = [0, 0, 0, 0, 0, 90];
             malePoso = [-lenConn, 0, 0];
         }
-        const femStem = new Connections.Joint(scene, this, 'femStem', femPosi, radStem+offset, lenConn, numArcPts);
-        const maleStem = new Connections.Joint(scene, this, 'maleStem', malePosi, radStem+offset, lenConn, numArcPts);
+        const femStem = new Connections.Joint(scene, this, 'femStem', femPosi, radStem+offset, 
+            lenConn, numArcPts);
+        const maleStem = new Connections.Joint(scene, this, 'maleStem', malePosi, radStem+offset, 
+            lenConn, numArcPts);
 
             // Create monitors
             let fi = BABYLON.MeshBuilder.CreateBox('fi', {size:this.monitorSize});
-            fi.translate(new BABYLON.Vector3(femPosi[0], femPosi[1], femPosi[2]), 1, BABYLON.Space.WORLD);
+            fi.translate(new BABYLON.Vector3(femPosi[0], femPosi[1], femPosi[2]), 1, 
+                BABYLON.Space.WORLD);
             fi.isVisible = false;
             const fo = BABYLON.MeshBuilder.CreateBox('fo', {size:this.monitorSize});
-            fo.translate(new BABYLON.Vector3(femPoso[0], femPoso[1], femPoso[2]), 1, BABYLON.Space.WORLD);
+            fo.translate(new BABYLON.Vector3(femPoso[0], femPoso[1], femPoso[2]), 1, 
+                BABYLON.Space.WORLD);
             fo.isVisible = false;
             let mi = BABYLON.MeshBuilder.CreateBox('mi', {size:this.monitorSize});
-            mi.translate(new BABYLON.Vector3(malePosi[0], malePosi[1], malePosi[2]), 1, BABYLON.Space.WORLD);
+            mi.translate(new BABYLON.Vector3(malePosi[0], malePosi[1], malePosi[2]), 1, 
+                BABYLON.Space.WORLD);
             mi.isVisible = false;
             const mo = BABYLON.MeshBuilder.CreateBox('mo', {size:this.monitorSize});
-            mo.translate(new BABYLON.Vector3(malePoso[0], malePoso[1], malePoso[2]), 1, BABYLON.Space.WORLD);
+            mo.translate(new BABYLON.Vector3(malePoso[0], malePoso[1], malePoso[2]), 1, 
+                BABYLON.Space.WORLD);
             mo.isVisible = false;
 
             // Assign monitors to connections
@@ -732,20 +762,24 @@ class Stem extends Component {
                 new BABYLON.Vector3(femPosi[0], femPosi[1], femPosi[2]),
                 new BABYLON.Vector3(femPosn[0], femPosn[1], femPosn[2])
             ];
-            const femNutCap = BABYLON.MeshBuilder.CreateTube('femNutCap', {path:femNutCapPath, radius:radNut, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
+            const femNutCap = BABYLON.MeshBuilder.CreateTube('femNutCap', {path:femNutCapPath, 
+                radius:radNut, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
                 sideOrientation:BABYLON.Mesh.DOUBLESIDE});
             const femNutConnPath = [
                 new BABYLON.Vector3(femPosi[0], femPosi[1], femPosi[2]),
                 new BABYLON.Vector3(femPoso[0], femPoso[1], femPoso[2])
             ];
-            const femNutConn = BABYLON.MeshBuilder.CreateTube('femNutConn', {path:femNutConnPath, radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
+            const femNutConn = BABYLON.MeshBuilder.CreateTube('femNutConn', {path:femNutConnPath, 
+                radius:radConn, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
                 sideOrientation:BABYLON.Mesh.DOUBLESIDE});
-            this.femNut = BABYLON.Mesh.MergeMeshes([femNutCap, femNutConn], true, true, undefined, false, false);
+            this.femNut = BABYLON.Mesh.MergeMeshes([femNutCap, femNutConn], true, true, 
+                undefined, false, false);
             const maleNutPath = [
                 new BABYLON.Vector3(malePosi[0], malePosi[1], malePosi[2]),
                 new BABYLON.Vector3(malePoso[0], malePoso[1], malePoso[2])
             ];
-            this.maleNut = BABYLON.MeshBuilder.CreateTube('maleNut', {path:maleNutPath, radius:radNut, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
+            this.maleNut = BABYLON.MeshBuilder.CreateTube('maleNut', {path:maleNutPath, 
+                radius:radNut, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
                 sideOrientation:BABYLON.Mesh.DOUBLESIDE});
             
         // Create branch/trunk connections
@@ -763,23 +797,31 @@ class Stem extends Component {
             while (spaceRem >= thickBT) {
                 femPosi = [(i-1)*thickBT, 0, 0, 0, 0, -90];
                 let femPosii = [i*thickBT, 0, 0];
-                malePosi = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
-                let malePosii = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180)];
+                malePosi = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 
+                    0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180), -angleBend, 0, -90];
+                let malePosii = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 
+                    0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180)];
                 if (reflected == 1) {
-                    femPosi = [(lenStem/2)+(lenStem/2-(i-1)*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-(i-1)*thickBT)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
-                    femPosii = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180)];
+                    femPosi = [(lenStem/2)+(lenStem/2-(i-1)*thickBT)*Math.cos(angleBend*Math.PI/180), 
+                        0, (lenStem/2-(i-1)*thickBT)*Math.sin(angleBend*Math.PI/180), angleBend, 0, 90];
+                    femPosii = [(lenStem/2)+(lenStem/2-i*thickBT)*Math.cos(angleBend*Math.PI/180), 
+                        0, (lenStem/2-i*thickBT)*Math.sin(angleBend*Math.PI/180)];
                     malePosi = [i*thickBT, 0, 0, 0, 0, 90];
                     malePosii = [i*thickBT, 0, 0];
                 }
-                const femBT = new Connections.Joint(scene, this, 'femBT', femPosi, radStem+offset/2, thickBT, numArcPts);
-                const maleBT = new Connections.Joint(scene, this, 'maleBT', malePosi, radStem+offset/2, thickBT, numArcPts);
+                const femBT = new Connections.Joint(scene, this, 'femBT', femPosi, 
+                    radStem+offset/2, thickBT, numArcPts);
+                const maleBT = new Connections.Joint(scene, this, 'maleBT', malePosi, 
+                    radStem+offset/2, thickBT, numArcPts);
                 
                     // Create monitors
                     const fii = BABYLON.MeshBuilder.CreateBox('fii', {size:this.monitorSize});
-                    fii.translate(new BABYLON.Vector3(femPosii[0], femPosii[1], femPosii[2]), 1, BABYLON.Space.WORLD);
+                    fii.translate(new BABYLON.Vector3(femPosii[0], femPosii[1], femPosii[2]), 
+                        1, BABYLON.Space.WORLD);
                     fii.isVisible = false;
                     const mii = BABYLON.MeshBuilder.CreateBox('mii', {size:this.monitorSize});
-                    mii.translate(new BABYLON.Vector3(malePosii[0], malePosii[1], malePosii[2]), 1, BABYLON.Space.WORLD);
+                    mii.translate(new BABYLON.Vector3(malePosii[0], malePosii[1], malePosii[2]), 
+                        1, BABYLON.Space.WORLD);
                     mii.isVisible = false;
 
                     // Assign monitors to connections
@@ -789,13 +831,16 @@ class Stem extends Component {
                     // Create nodes
                     nodeIJ = new Elements.Node(scene, this, 'ij', [(i-1)*thickBT+thickBT/2, 0, 0]);
                     this.elements.push(nodeIJ);
-                    nodeJK = new Elements.Node(scene, this, 'jk', [(lenStem/2)+(lenStem/2-i*thickBT+thickBT/2)*Math.cos(angleBend*Math.PI/180), 0, 
+                    nodeJK = new Elements.Node(scene, this, 'jk', [(lenStem/2)+(lenStem/2
+                        -i*thickBT+thickBT/2)*Math.cos(angleBend*Math.PI/180), 0, 
                         (lenStem/2-i*thickBT+thickBT/2)*Math.sin(angleBend*Math.PI/180)]);
                     this.elements.push(nodeJK);
 
                     // Create frames
-                    this.elements.push(new Elements.Frame(scene, this, 'ij', prevIJ, nodeIJ, radFrame, 1, 1, 1, 1)); // TO-DO update properties
-                    this.elements.push(new Elements.Frame(scene, this, 'jk', prevJK, nodeJK, radFrame, 1, 1, 1, 1)); // TO-DO update properties
+                    this.elements.push(new Elements.Frame(scene, this, 'ij', prevIJ, nodeIJ, 
+                        radFrame, 1, 1, 1, 1)); // TO-DO update properties
+                    this.elements.push(new Elements.Frame(scene, this, 'jk', prevJK, nodeJK, 
+                        radFrame, 1, 1, 1, 1)); // TO-DO update properties
                 
                 // Update variables
                 this.connections.push(femBT);
@@ -809,8 +854,10 @@ class Stem extends Component {
             }
 
                     // Create remaining frames
-                    this.elements.push(new Elements.Frame(scene, this, 'ij', prevIJ, nodeJ, radFrame, 1, 1, 1, 1)); // TO-DO update properties
-                    this.elements.push(new Elements.Frame(scene, this, 'jk', prevJK, nodeJ, radFrame, 1, 1, 1, 1)); // TO-DO update properties
+                    this.elements.push(new Elements.Frame(scene, this, 'ij', prevIJ, nodeJ, 
+                        radFrame, 1, 1, 1, 1)); // TO-DO update properties
+                    this.elements.push(new Elements.Frame(scene, this, 'jk', prevJK, nodeJ, 
+                        radFrame, 1, 1, 1, 1)); // TO-DO update properties
 
         // Set parents
         this.parentConnections();
@@ -828,13 +875,14 @@ class Stem extends Component {
         this.mesh.disableEdgesRendering();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
-        this.inclGizmos = [true, true, true, true, false, false]; // Array of which gizmos to include [dx, dy, dz, rx, ry, rz]
+        this.inclGizmos = [true, true, true, true, false, false]; // [dx, dy, dz, rx, ry, rz]
     }
 }
 
 // Define branch class (frame members with holes & slots)
 class Branch extends Component {
-    constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], lenBranch, thickBranch, radBranch, radHole, spacHole, lenSlot, reflected, numArcPts) {
+    constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], lenBranch, 
+        thickBranch, radBranch, radHole, spacHole, lenSlot, reflected, numArcPts) {
         super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
 
         // Initialize properties
@@ -845,7 +893,7 @@ class Branch extends Component {
         this.radHole = radHole; // Radius of holes
         this.spacHole = spacHole; // Center-to-center spacing between holes
         this.lenSlot = lenSlot; // Max length of slot hole
-        this.reflected = reflected; // Toggle for if branch is reflected along perpendicular axis (ends flipped)
+        this.reflected = reflected; // Toggle for if branch is reflected (ends flipped)
         this.numArcPts = numArcPts; // # of points defining circle arc resolution
 
         // Create profile shape
@@ -890,7 +938,8 @@ class Branch extends Component {
                 this.elements.push(nodeI);
 
                 // Create connection
-                const leftConn = new Connections.Joint(scene, this, 'left', [0, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts);
+                const leftConn = new Connections.Joint(scene, this, 'left', [0, -thickBranch, 0, 
+                    0, 0, 0], radHole, thickBranch, numArcPts);
 
                     // Create monitors
                     const mL0 = BABYLON.MeshBuilder.CreateBox('mL0', {size:this.monitorSize});

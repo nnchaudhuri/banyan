@@ -12,21 +12,26 @@ html, body {
   width: 100%;
 }
 
+.menu {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+}
+
 .button {
   background-color: rgb(255, 255, 255);
   color: black;
   border: 1px solid rgb(235, 235, 235);
   padding: 4px 6px;
   border-radius: 6px;
-  width: 50px;
   text-align: center;
   margin: 5px;
 }
 
-.wide {
-  width: 110px;
-}
-
 .button:hover {
   background-color: rgb(235, 235, 235);
+}
+
+.button-wide {
+  width: 110px;
+  grid-column: span 2;
 }
