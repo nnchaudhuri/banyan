@@ -2,12 +2,16 @@ import React, { useState } from 'react';
 import '../styles/index.css';
 import Button from './Button';
 import IntInput from './IntInput';
+import Text from './Text';
+import Blank from './Blank';
 
 const Menu = () => {
-  const [leafValue, setLeafValue] = useState(2);
-  const [stemValue, setStemValue] = useState(2);
-  const [branchValue, setBranchValue] = useState(2);
-  const [trunkValue, setTrunkValue] = useState(2);
+  // Initialize input states
+  const [trunkValue, setTrunkValue] = useState();
+  const [branchValue, setBranchValue] = useState();
+  const [stemValue, setStemValue] = useState();
+  const [leafXValue, setLeafXValue] = useState();
+  const [leafYValue, setLeafYValue] = useState();
 
   // Render menu
   return (
@@ -24,10 +28,20 @@ const Menu = () => {
       <Button eventType="reflect" className="button" title="R">Reflect</Button>
       <Button eventType="connections" className="button button-wide" title="N">Connections</Button>
       <Button eventType="transparency" className="button button-wide" title="T">Transparency</Button>
-      <IntInput label="Leaf" value={leafValue} onChange={setLeafValue} min={2} max={120} />
-      <IntInput label="Stem" value={stemValue} onChange={setStemValue} min={2} max={120} />
-      <IntInput label="Branch" value={branchValue} onChange={setBranchValue} min={2} max={120} />
-      <IntInput label="Trunk" value={trunkValue} onChange={setTrunkValue} min={2} max={120} />
+
+      <Blank count={2} />
+      <Text className="text">Add</Text>
+      <Text className="text">of Size</Text>
+      <Button eventType="addTrunk" className="button">Trunk</Button>
+      <IntInput value={trunkValue} onChange={setTrunkValue} min={2} max={120} />
+      <Button eventType="addBranch" className="button">Branch</Button>
+      <IntInput value={branchValue} onChange={setBranchValue} min={2} max={120} />
+      <Button eventType="addStem" className="button">Stem</Button>
+      <IntInput value={stemValue} onChange={setStemValue} min={2} max={120} />
+      <Button eventType="addLeaf" className="button">Leaf</Button>
+      <IntInput value={leafXValue} onChange={setLeafXValue} min={2} max={120} />
+      <Blank count={1} />
+      <IntInput value={leafYValue} onChange={setLeafYValue} min={2} max={120} />
     </div>
   );
 };
