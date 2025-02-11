@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import '../styles/index.css';
-import { Button, IntInput, Text, Blank } from '../components';
+import { Button, IntInput, Text, Blank, IntInputButton } from '../components';
 
 const Menu = () => {
   // Initialize input states
   const [trunkValue, setTrunkValue] = useState(12);
-  const [branchValue, setBranchValue] = useState(12);
   const [stemValue, setStemValue] = useState(6);
   const [leafXValue, setLeafXValue] = useState(4);
   const [leafYValue, setLeafYValue] = useState(4);
@@ -27,17 +26,16 @@ const Menu = () => {
       <Button eventType="transparency" className="button-wide" title="T">Transparency</Button>
 
       <Blank count={2} />
-      <Text className="text">Add</Text>
-      <Text className="text">of Size</Text>
+      <Text>Add</Text>
+      <Text>of Size</Text>
       <Button eventType="addTrunk">Trunk</Button>
       <IntInput value={trunkValue} onChange={setTrunkValue} min={2} max={120} />
-      <Button eventType="addBranch">Branch</Button>
-      <IntInput value={branchValue} onChange={setBranchValue} min={2} max={120} />
+      <IntInputButton eventType="addBranch" title="Branch" min={2} max={120} initialValue={12} />
       <Button eventType="addStem">Stem</Button>
       <IntInput value={stemValue} onChange={setStemValue} min={2} max={120} />
       <Button eventType="addLeaf">Leaf</Button>
       <IntInput value={leafXValue} onChange={setLeafXValue} min={2} max={120} />
-      <Blank/>
+      <Blank />
       <IntInput value={leafYValue} onChange={setLeafYValue} min={2} max={120} />
     </div>
   );

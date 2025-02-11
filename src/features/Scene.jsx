@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import * as BABYLON from 'babylonjs';
 import * as Collections from '../utils/collections.js';
+import * as Components from '../utils/components.js';
 
 const Scene = () => {
   useEffect(() => {
@@ -48,8 +49,7 @@ const Scene = () => {
         light.direction = camera.position;
     });
 
-    /*
-    // Default component properties (if not loading from file)
+    // Default component properties
     const lenX = 6; // Leaf length in x-dir
     const lenY = 4; // Leaf length in y-dir
 
@@ -77,7 +77,6 @@ const Scene = () => {
     const spacRib = thickBranch; // Ribs clear spacing
     const edgeRib = thickBranch; // Tile side edge distance before first rib (if not reflected)
     const overhang = 1; // Tile end edge distance overhanging rib end
-    */
 
     // General interface properties
     const snapDist = 1; // Snap distance for gizmo controls
@@ -124,11 +123,21 @@ const Scene = () => {
       reflect: () => tree.reflectSelected(),
       connections: () => tree.toggleAllConnections(),
       transparency: () => tree.toggleAllTransparency(),
+      addBranch: (length) => {
+        tree.add(new Components.Branch(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], 
+          length, thickBranch, radBranch, radHole, spacHole, lenSlot, 0, numArcPts));
+      }
     };
 
     // Event listeners for actions
     Object.keys(actionHandlers).forEach(action => {
-      window.addEventListener(action, actionHandlers[action]);
+      window.addEventListener(action, (event) => {
+        if (action === 'addBranch') {
+          actionHandlers[action](event.detail.length);
+        } else {
+          actionHandlers[action]();
+        }
+      });
     });
 
     // Render loop

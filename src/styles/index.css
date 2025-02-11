@@ -80,6 +80,11 @@ html, body {
   margin: var(--margin);
 }
 
+.int-input-button {
+  grid-column: span 2;
+  display: flex;
+}
+
 .text {
   text-align: center;
   font-size: var(--font-size);
