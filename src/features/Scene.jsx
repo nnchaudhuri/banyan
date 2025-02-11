@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import * as BABYLON from 'babylonjs';
 import * as Collections from '../utils/collections.js';
 

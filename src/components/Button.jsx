@@ -1,4 +1,4 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import '../styles/index.css';
 
 const Button = ({ eventType, className, title, children }) => {
@@ -12,6 +12,18 @@ const Button = ({ eventType, className, title, children }) => {
       {children}
     </button>
   );
+};
+
+Button.propTypes = {
+  eventType: PropTypes.string.isRequired,
+  className: PropTypes.string,
+  title: PropTypes.string,
+  children: PropTypes.node.isRequired,
+};
+
+Button.defaultProps = {
+  className: '',
+  title: '',
 };
 
 export default Button;

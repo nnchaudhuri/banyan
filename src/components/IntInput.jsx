@@ -1,4 +1,4 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import '../styles/index.css';
 
 const IntInput = ({ value, onChange, min, max }) => {
@@ -21,6 +21,13 @@ const IntInput = ({ value, onChange, min, max }) => {
       pattern="[0-9]*"
     />
   );
+};
+
+IntInput.propTypes = {
+  value: PropTypes.number.isRequired,
+  onChange: PropTypes.func.isRequired,
+  min: PropTypes.number.isRequired,
+  max: PropTypes.number.isRequired,
 };
 
 export default IntInput;

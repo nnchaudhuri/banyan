@@ -1,4 +1,4 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import '../styles/index.css';
 
 const Blank = ({ count }) => {
@@ -7,6 +7,14 @@ const Blank = ({ count }) => {
   ));
 
   return <>{blanks}</>;
+};
+
+Blank.propTypes = {
+  count: PropTypes.number,
+};
+
+Blank.defaultProps = {
+  count: 1,
 };
 
 export default Blank;

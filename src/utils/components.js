@@ -6,7 +6,7 @@ import * as Connections from './connections.js';
 
 // Define component class
 class Component {
-    constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]) {
+    constructor(scene, collection, snapDist, snapRot) {
         // Initialize properties
         this.scene = scene; // Scene hosting component
         this.collection = collection; // Collection the component is a part of
@@ -473,14 +473,14 @@ class Component {
 
         // Click (select) component
         this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-            BABYLON.ActionManager.OnPickTrigger, event => {this.manageSelection()}));
+            BABYLON.ActionManager.OnPickTrigger, () => {this.manageSelection()}));
     }
 }
 
 // Define leaf class (fabric elements)
 class Leaf extends Component {
     constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], lenX, lenY) {
-        super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
+        super(scene, collection, snapDist, snapRot);
 
         // Initialize properties
         this.type = 'leaf'; // Component type
@@ -570,7 +570,7 @@ class Leaf extends Component {
 class Stem extends Component {
     constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], angleBend, lenStem, 
         radStem, radFill, radConn, lenConn, thickBT, reflected, numArcPts, numFillPts) {
-        super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
+        super(scene, collection, snapDist, snapRot);
         
         // Initialize properties
         this.type = 'stem'; // Component type
@@ -883,7 +883,7 @@ class Stem extends Component {
 class Branch extends Component {
     constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], lenBranch, 
         thickBranch, radBranch, radHole, spacHole, lenSlot, reflected, numArcPts) {
-        super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
+        super(scene, collection, snapDist, snapRot);
 
         // Initialize properties
         this.type = 'branch'; // Component type
@@ -986,14 +986,19 @@ class Branch extends Component {
                 holes.push(slotHole);
 
                 // Create connection
-                this.connections.push(new Connections.Slot(scene, this, i.toString(), [startSlot, 0, 0, 0, 0, 0], radHole, lengths[i], thickBranch, numArcPts));
+                this.connections.push(new Connections.Slot(scene, this, i.toString(), 
+                    [startSlot, 0, 0, 0, 0, 0], radHole, lengths[i], thickBranch, numArcPts));
                 
                 // Between holes bounding box
                 const btwn = [
-                    new BABYLON.Vector3(startSlot-spacHole+radHole+this.BBOffset, 0, radHole+this.BBOffset),
-                    new BABYLON.Vector3(startSlot-radHole-this.BBOffset, 0, radHole+this.BBOffset),
-                    new BABYLON.Vector3(startSlot-radHole-this.BBOffset, 0, -radHole-this.BBOffset),
-                    new BABYLON.Vector3(startSlot-spacHole+radHole+this.BBOffset, 0, -radHole-this.BBOffset)
+                    new BABYLON.Vector3(startSlot-spacHole+radHole+this.BBOffset, 0, 
+                        radHole+this.BBOffset),
+                    new BABYLON.Vector3(startSlot-radHole-this.BBOffset, 0, 
+                        radHole+this.BBOffset),
+                    new BABYLON.Vector3(startSlot-radHole-this.BBOffset, 0, 
+                        -radHole-this.BBOffset),
+                    new BABYLON.Vector3(startSlot-spacHole+radHole+this.BBOffset, 0, 
+                        -radHole-this.BBOffset)
                 ];
                 const btwnBB = BABYLON.MeshBuilder.ExtrudePolygon('btwnBB', {shape:btwn, 
                     depth:thickBranch-2*this.BBOffset, 
@@ -1007,15 +1012,20 @@ class Branch extends Component {
 
                 // Right of final slot bounding box
                 const finSlotR = [
-                    new BABYLON.Vector3(lenBranch-spacHole+radHole+this.BBOffset, 0, radHole+this.BBOffset),
-                    new BABYLON.Vector3(lenBranch-radHole-this.BBOffset, 0, radHole+this.BBOffset),
-                    new BABYLON.Vector3(lenBranch-radHole-this.BBOffset, 0, -radHole-this.BBOffset),
-                    new BABYLON.Vector3(lenBranch-spacHole+radHole+this.BBOffset, 0, -radHole-this.BBOffset)
+                    new BABYLON.Vector3(lenBranch-spacHole+radHole+this.BBOffset, 0, 
+                        radHole+this.BBOffset),
+                    new BABYLON.Vector3(lenBranch-radHole-this.BBOffset, 0, 
+                        radHole+this.BBOffset),
+                    new BABYLON.Vector3(lenBranch-radHole-this.BBOffset, 0, 
+                        -radHole-this.BBOffset),
+                    new BABYLON.Vector3(lenBranch-spacHole+radHole+this.BBOffset, 0, 
+                        -radHole-this.BBOffset)
                 ];
-                const finSlotRBB = BABYLON.MeshBuilder.ExtrudePolygon('finSlotRBB', {shape:finSlotR, 
-                    depth:thickBranch-2*this.BBOffset, 
+                const finSlotRBB = BABYLON.MeshBuilder.ExtrudePolygon('finSlotRBB', 
+                    {shape:finSlotR, depth:thickBranch-2*this.BBOffset, 
                     sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
-                finSlotRBB.translate(new BABYLON.Vector3(0, -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                finSlotRBB.translate(new BABYLON.Vector3(0, -this.BBOffset, 0), 1, 
+                    BABYLON.Space.WORLD);
                 finSlotRBB.isVisible = false;
                 this.BB.push(finSlotRBB);
 
@@ -1027,14 +1037,16 @@ class Branch extends Component {
                 this.elements.push(nodeJ);
 
                 // Create connection
-                const rightConn = new Connections.Joint(scene, this, 'right', [lenBranch, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts);
+                const rightConn = new Connections.Joint(scene, this, 'right', 
+                    [lenBranch, -thickBranch, 0, 0, 0, 0], radHole, thickBranch, numArcPts);
                 
                     // Create monitors
                     const mR0 = BABYLON.MeshBuilder.CreateBox('mR0', {size:this.monitorSize});
                     mR0.translate(new BABYLON.Vector3(lenBranch, 0, 0), 1, BABYLON.Space.WORLD);
                     mR0.isVisible = false;
                     const mR1 = BABYLON.MeshBuilder.CreateBox('mR1', {size:this.monitorSize});
-                    mR1.translate(new BABYLON.Vector3(lenBranch, -thickBranch, 0), 1, BABYLON.Space.WORLD);
+                    mR1.translate(new BABYLON.Vector3(lenBranch, -thickBranch, 0), 1, 
+                        BABYLON.Space.WORLD);
                     mR1.isVisible = false;
                     rightConn.monitors = [mR0, mR1];
                 
@@ -1060,7 +1072,8 @@ class Branch extends Component {
             sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
         this.mesh.addRotation(-Math.PI/2, 0, 0); // Rotate to default orientation
                 // Create frame
-                this.elements.push(new Elements.Frame(scene, this, 'ij', nodeI, nodeJ, 0.25, 1, 1, 1, 1)); // TO-DO update properties
+                this.elements.push(new Elements.Frame(scene, this, 'ij', nodeI, nodeJ, 
+                    0.25, 1, 1, 1, 1)); // TO-DO update properties
 
         // Set parents
         this.parentConnections();
@@ -1075,14 +1088,16 @@ class Branch extends Component {
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
-        this.inclGizmos = [true, true, true, false, false, true]; // Array of which gizmos to include [dx, dy, dz, rx, ry, rz]
+        this.inclGizmos = [true, true, true, false, false, true]; // [dx, dy, dz, rx, ry, rz]
     }
 }
 
 // Define trunk class (plank tiles with holed ribs)
 class Trunk extends Component {
-    constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], lenTrunk, widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, overhang, reflected, numArcPts) {
-        super(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az]);
+    constructor(scene, collection, snapDist, snapRot, [x, y, z, ax, ay, az], lenTrunk, widthTile, 
+        thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, radHole, spacHole, 
+        overhang, reflected, numArcPts) {
+        super(scene, collection, snapDist, snapRot);
 
         // Initialize properties
         this.type = 'trunk'; // Component type
@@ -1101,7 +1116,8 @@ class Trunk extends Component {
         this.overhang = overhang; // Tile end edge distance overhanging rib end
         this.numArcPts = numArcPts; // # of points defining circle arc resolution
 
-        const edgeRibLast = widthTile-edgeRib-numRibs*thickRib-(numRibs-1)*spacRib; // Tile side edge distance after last rib (if not reflected)
+        // Tile side edge distance after last rib (if not reflected)
+        const edgeRibLast = widthTile-edgeRib-numRibs*thickRib-(numRibs-1)*spacRib;
         let edgeRibFirst = edgeRib;
         if (reflected == 1) {
             edgeRibFirst = edgeRibLast;
@@ -1127,14 +1143,16 @@ class Trunk extends Component {
             const rectBB = [
                 new BABYLON.Vector3(-2*radRib-overhang+this.BBOffset, 0, this.BBOffset),
                 new BABYLON.Vector3(-2*radRib-overhang+this.lenTile-this.BBOffset, 0, this.BBOffset),
-                new BABYLON.Vector3(-2*radRib-overhang+this.lenTile-this.BBOffset, 0, widthTile-this.BBOffset),
+                new BABYLON.Vector3(-2*radRib-overhang+this.lenTile-this.BBOffset, 0, 
+                    widthTile-this.BBOffset),
                 new BABYLON.Vector3(-2*radRib-overhang+this.BBOffset, 0, widthTile-this.BBOffset)
             ];
             const tileBB = BABYLON.MeshBuilder.ExtrudePolygon('tileBB', {shape:rectBB, 
                 depth:thickTile-2*this.BBOffset, 
                 sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
             tileBB.addRotation(Math.PI/2, 0, 0);
-            tileBB.translate(new BABYLON.Vector3(0, 0, 2*radRib-this.BBOffset), 1, BABYLON.Space.WORLD);
+            tileBB.translate(new BABYLON.Vector3(0, 0, 2*radRib-this.BBOffset), 1, 
+                BABYLON.Space.WORLD);
             tileBB.isVisible = false;
             this.BB.push(tileBB);
 
@@ -1144,12 +1162,14 @@ class Trunk extends Component {
 
             // Top left quarter-circle
             for (let i = 0; i <= numArcPts/4; i++) {
-                profile.push(new BABYLON.Vector3(radRib*(-2+Math.sin(i*2*Math.PI/numArcPts)), 0, radRib*Math.cos(i*2*Math.PI/numArcPts)));
+                profile.push(new BABYLON.Vector3(radRib*(-2+Math.sin(i*2*Math.PI/numArcPts)), 0, 
+                    radRib*Math.cos(i*2*Math.PI/numArcPts)));
             }
             
             // Bottom left quarter-circle
             for (let i = 1; i <= numArcPts/4; i++) {
-                profile.push(new BABYLON.Vector3(-radRib*Math.cos(i*2*Math.PI/numArcPts), 0, -radRib*Math.sin(i*2*Math.PI/numArcPts)));
+                profile.push(new BABYLON.Vector3(-radRib*Math.cos(i*2*Math.PI/numArcPts), 0, 
+                    -radRib*Math.sin(i*2*Math.PI/numArcPts)));
             }
 
             // Flat edge
@@ -1157,12 +1177,14 @@ class Trunk extends Component {
 
             // Bottom right quarter-circle
             for (let i = 1; i <= numArcPts/4; i++) {
-                profile.push(new BABYLON.Vector3(lenTrunk+radRib*Math.sin(i*2*Math.PI/numArcPts), 0, -radRib*Math.cos(i*2*Math.PI/numArcPts)));
+                profile.push(new BABYLON.Vector3(lenTrunk+radRib*Math.sin(i*2*Math.PI/numArcPts), 
+                    0, -radRib*Math.cos(i*2*Math.PI/numArcPts)));
             }
 
             // Top right quarter-circle
             for (let i = 1; i <= numArcPts/4; i++) {
-                profile.push(new BABYLON.Vector3(lenTrunk+radRib*(2-Math.cos(i*2*Math.PI/numArcPts)), 0, radRib*Math.sin(i*2*Math.PI/numArcPts)));
+                profile.push(new BABYLON.Vector3(lenTrunk+radRib*(2-Math.cos(i*2*Math.PI/numArcPts)), 
+                    0, radRib*Math.sin(i*2*Math.PI/numArcPts)));
             }
 
             // Holes
@@ -1173,14 +1195,18 @@ class Trunk extends Component {
                 holes.push(hole);
 
                 // Create connection
-                const holeConn = new Connections.Joint(scene, this, j.toString+','+k.toString(), [i, -edgeRibFirst-thickRib-j*(thickRib+spacRib), 0, 0, 0, 0], radHole, thickRib, numArcPts);
+                const holeConn = new Connections.Joint(scene, this, j.toString+','+k.toString(), 
+                    [i, -edgeRibFirst-thickRib-j*(thickRib+spacRib), 0, 0, 0, 0], 
+                    radHole, thickRib, numArcPts);
 
                     // Create monitors
                     const m0 = BABYLON.MeshBuilder.CreateBox('m0', {size:this.monitorSize});
-                    m0.translate(new BABYLON.Vector3(i, -edgeRibFirst-j*(thickRib+spacRib), 0), 1, BABYLON.Space.WORLD);
+                    m0.translate(new BABYLON.Vector3(i, -edgeRibFirst-j*(thickRib+spacRib), 0), 
+                        1, BABYLON.Space.WORLD);
                     m0.isVisible = false;
                     const m1 = BABYLON.MeshBuilder.CreateBox('m1', {size:this.monitorSize});
-                    m1.translate(new BABYLON.Vector3(i, -edgeRibFirst-thickRib-j*(thickRib+spacRib), 0), 1, BABYLON.Space.WORLD);
+                    m1.translate(new BABYLON.Vector3(i, -edgeRibFirst-thickRib-j*(thickRib+spacRib), 0), 
+                        1, BABYLON.Space.WORLD);
                     m1.isVisible = false;
                     holeConn.monitors = [m0, m1];
                 
@@ -1192,7 +1218,8 @@ class Trunk extends Component {
             const rib = BABYLON.MeshBuilder.ExtrudePolygon('rib', {shape:profile, holes:holes, 
                 depth:thickRib, 
                 sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
-            rib.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib), 0), 1, BABYLON.Space.WORLD);
+            rib.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib), 0), 
+                1, BABYLON.Space.WORLD);
             meshes.push(rib);
 
                 // Rib bounding boxes
@@ -1206,7 +1233,8 @@ class Trunk extends Component {
                     const aboveBB = BABYLON.MeshBuilder.ExtrudePolygon('aboveBB', {shape:above, 
                         depth:thickRib-2*this.BBOffset, 
                         sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
-                    aboveBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                    aboveBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)
+                        -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
                     aboveBB.isVisible = false;
                     this.BB.push(aboveBB);
 
@@ -1220,7 +1248,8 @@ class Trunk extends Component {
                     const belowBB = BABYLON.MeshBuilder.ExtrudePolygon('belowBB', {shape:below, 
                         depth:thickRib-2*this.BBOffset, 
                         sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
-                    belowBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                    belowBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)
+                        -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
                     belowBB.isVisible = false;
                     this.BB.push(belowBB);
 
@@ -1234,7 +1263,8 @@ class Trunk extends Component {
                     const leftBB = BABYLON.MeshBuilder.ExtrudePolygon('leftBB', {shape:left, 
                         depth:thickRib-2*this.BBOffset, 
                         sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
-                    leftBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                    leftBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)
+                        -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
                     leftBB.isVisible = false;
                     this.BB.push(leftBB);
 
@@ -1242,14 +1272,17 @@ class Trunk extends Component {
                     for (let i = 0; i < lenTrunk; i += spacHole) {
                         const btwn = [
                             new BABYLON.Vector3(i+radHole+this.BBOffset, 0, radHole+this.BBOffset),
-                            new BABYLON.Vector3(i+spacHole-radHole-this.BBOffset, 0, radHole+this.BBOffset),
-                            new BABYLON.Vector3(i+spacHole-radHole-this.BBOffset, 0, -radHole-this.BBOffset),
+                            new BABYLON.Vector3(i+spacHole-radHole-this.BBOffset, 0, 
+                                radHole+this.BBOffset),
+                            new BABYLON.Vector3(i+spacHole-radHole-this.BBOffset, 0, 
+                                -radHole-this.BBOffset),
                             new BABYLON.Vector3(i+radHole+this.BBOffset, 0, -radHole-this.BBOffset)
                         ];
                         const btwnBB = BABYLON.MeshBuilder.ExtrudePolygon('btwnBB', {shape:btwn, 
                             depth:thickRib-2*this.BBOffset, 
                             sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
-                        btwnBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                        btwnBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)
+                            -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
                         btwnBB.isVisible = false;
                         this.BB.push(btwnBB);
                     }
@@ -1264,7 +1297,8 @@ class Trunk extends Component {
                     const rightBB = BABYLON.MeshBuilder.ExtrudePolygon('rightBB', {shape:right, 
                         depth:thickRib-2*this.BBOffset, 
                         sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene, earcut);
-                    rightBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)-this.BBOffset, 0), 1, BABYLON.Space.WORLD);
+                    rightBB.translate(new BABYLON.Vector3(0, -edgeRibFirst-j*(thickRib+spacRib)
+                        -this.BBOffset, 0), 1, BABYLON.Space.WORLD);
                     rightBB.isVisible = false;
                     this.BB.push(rightBB);
         }
@@ -1286,7 +1320,7 @@ class Trunk extends Component {
         this.setupVisuals();
         this.mesh.actionManager = new BABYLON.ActionManager(scene);
         this.setupControls();
-        this.inclGizmos = [true, true, true, false, false, true]; // Array of which gizmos to include [dx, dy, dz, rx, ry, rz]
+        this.inclGizmos = [true, true, true, false, false, true]; // [dx, dy, dz, rx, ry, rz]
     }
 }
 

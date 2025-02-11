@@ -4,7 +4,7 @@ import * as Geometry from './geometry.js';
 
 // Define connection class
 class Connection {
-    constructor(scene, component, ID, [x, y, z, ax, ay, az]) {
+    constructor(scene, component, ID) {
         // Initialize properties
         this.scene = scene; // Scene hosting connection
         this.component = component; // Component the connection is a part of
@@ -117,10 +117,13 @@ class Connection {
 
     // Check if this connection is aligned (connectable) to another connection
     connectable(conn) {
-        if (this.monitors.length > 1 && conn.monitors.length > 1 && (!this.component.intersecting || !conn.component.intersecting)) {
-            if (this.monitors[0].intersectsMesh(conn.monitors[0], false) && this.monitors[1].intersectsMesh(conn.monitors[1], false)) {
+        if (this.monitors.length > 1 && conn.monitors.length > 1 
+            && (!this.component.intersecting || !conn.component.intersecting)) {
+            if (this.monitors[0].intersectsMesh(conn.monitors[0], false) 
+                && this.monitors[1].intersectsMesh(conn.monitors[1], false)) {
                 return true;
-            } else if (this.monitors[0].intersectsMesh(conn.monitors[1], false) && this.monitors[1].intersectsMesh(conn.monitors[0], false)) {
+            } else if (this.monitors[0].intersectsMesh(conn.monitors[1], false) 
+                && this.monitors[1].intersectsMesh(conn.monitors[0], false)) {
                 return true;
             }
         }
@@ -152,24 +155,28 @@ class Connection {
     // Set up connection controls & responses
     setupControls() {
         // Hover over connection
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, this, 'hovering', false));
-        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, this, 'hovering', true));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(
+            BABYLON.ActionManager.OnPointerOutTrigger, this, 'hovering', false));
+        this.mesh.actionManager.registerAction(new BABYLON.SetValueAction(
+            BABYLON.ActionManager.OnPointerOverTrigger, this, 'hovering', true));
 
         // Click (select) connection
-        this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, event => {this.manageSelection()}));
+        this.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+            BABYLON.ActionManager.OnPickTrigger, () => {this.manageSelection()}));
     }
 }
 
 // Define edge class (side connection of leaf component)
 class Edge extends Connection {
     constructor(scene, component, ID, [x, y, z, ax, ay, az], len) {
-        super(scene, component, ID, [x, y, z, ax, ay, az]);
+        super(scene, component, ID);
 
         // Initialize properties
         this.type = 'edge'; // Connection type
 
         // Create mesh
-        this.mesh = BABYLON.MeshBuilder.CreateBox('edge', {height:len, width:0.25, depth:0.05, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        this.mesh = BABYLON.MeshBuilder.CreateBox('edge', {height:len, width:0.25, depth:0.05, 
+            sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         // Set starting position & rotation
         this.move(x, y, z);
@@ -182,10 +189,10 @@ class Edge extends Connection {
     }
 }
 
-// Define joint class (end connection of stem component & circle hole connections in branch & trunk components)
+// Define joint class (end connection of stem & circle hole connections in branch & trunk)
 class Joint extends Connection {
     constructor(scene, component, ID, [x, y, z, ax, ay, az], rad, len, numArcPts) {
-        super(scene, component, ID, [x, y, z, ax, ay, az]);
+        super(scene, component, ID);
 
         // Initialize properties
         this.type = 'joint'; // Connection type
@@ -195,7 +202,8 @@ class Joint extends Connection {
             new BABYLON.Vector3(0, 0, 0),
             new BABYLON.Vector3(0, len, 0)
         ];
-        this.mesh = BABYLON.MeshBuilder.CreateTube('joint', {path:path, radius:rad, tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
+        this.mesh = BABYLON.MeshBuilder.CreateTube('joint', {path:path, radius:rad, 
+            tessellation:numArcPts, cap:BABYLON.Mesh.CAP_ALL, 
             sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         // Set starting position & rotation
@@ -212,7 +220,7 @@ class Joint extends Connection {
 // Define slot class (slotted hole connections in branch component) FIX!
 class Slot extends Connection {
     constructor(scene, component, ID, [x, y, z, ax, ay, az], rad, len, depth, numArcPts) {
-        super(scene, component, ID, [x, y, z, ax, ay, az]);
+        super(scene, component, ID);
 
         // Initialize properties
         this.type = 'slot'; // Connection type

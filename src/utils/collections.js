@@ -638,7 +638,6 @@ class Almanac extends Collection {
         let y = y0;
         let z = z0;
         const dx = 2;
-        const dy = 0;
         const dz = 2;
 
         // Generate leaves
@@ -660,7 +659,6 @@ class Almanac extends Collection {
         let x = x0;
         let y = y0;
         let z = z0;
-        const dx = 0;
         const dy = 2;
         const dz = 2;
         
@@ -684,9 +682,7 @@ class Almanac extends Collection {
         let x = x0;
         let y = y0;
         let z = z0;
-        const dx = 0;
         const dy = 2;
-        const dz = 0;
 
         // Generate branches
         for (let lenBranch = lenBranchMin; lenBranch <= lenBranchMax; lenBranch += lenBranchIncr) {
@@ -706,7 +702,6 @@ class Almanac extends Collection {
         let z = z0;
         const dx = 2;
         const dy = 2;
-        const dz = 0;
 
         // Generate trunks
         for (let widthTile = widthTileMin; widthTile <= widthTileMax; widthTile += widthTileIncr) {

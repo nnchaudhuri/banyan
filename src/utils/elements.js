@@ -73,7 +73,8 @@ class Node extends Element {
         this.z = z; // Node z coordinate
 
         // Create mesh
-        this.mesh = BABYLON.MeshBuilder.CreateSphere('node', {diameter:0.75, segments:component.collection.numArcPts});
+        this.mesh = BABYLON.MeshBuilder.CreateSphere('node', {diameter:0.75, 
+            segments:component.collection.numArcPts});
         this.mesh.position.x += x;
         this.mesh.position.y += y;
         this.mesh.position.z += z;
@@ -93,15 +94,19 @@ class Frame extends Element {
         // Initialize properties
         this.nodeI = nodeI; // Frame node I
         this.nodeJ = nodeJ; // Frame node J
-        this.L = Math.sqrt(Math.pow(nodeJ.x-nodeI.x, 2)+Math.pow(nodeJ.y-nodeI.y, 2)+Math.pow(nodeJ.z-nodeI.z, 2)); // Frame length
+        this.L = Math.sqrt(Math.pow(nodeJ.x-nodeI.x, 2)+Math.pow(nodeJ.y-nodeI.y, 2)
+            +Math.pow(nodeJ.z-nodeI.z, 2)); // Frame length
         this.A = A; // Frame sectional area
         this.E = E; // Frame young's modulus
         this.Iy = Iy; // Frame moment of inertia over local y-axis
         this.Iz = Iz; // Frame moment of inertia over local z-axis
 
         // Create mesh
-        const path = [new BABYLON.Vector3(nodeI.x, nodeI.y, nodeI.z), new BABYLON.Vector3(nodeJ.x, nodeJ.y, nodeJ.z)];
-        this.mesh = BABYLON.MeshBuilder.CreateTube('frame', {path:path, radius:radMesh, tessellation:component.collection.numArcPts, sideOrientation:BABYLON.Mesh.DOUBLESIDE});
+        const path = [new BABYLON.Vector3(nodeI.x, nodeI.y, nodeI.z), 
+            new BABYLON.Vector3(nodeJ.x, nodeJ.y, nodeJ.z)];
+        this.mesh = BABYLON.MeshBuilder.CreateTube('frame', {path:path, radius:radMesh, 
+            tessellation:component.collection.numArcPts, 
+            sideOrientation:BABYLON.Mesh.DOUBLESIDE});
 
         // Set up visuals & controls
         this.setupVisuals();

@@ -1,7 +1,7 @@
 :root {
   --background-color: rgb(255, 255, 255);
-  --hover-color: rgb(235, 235, 235);
-  --border-color: rgb(235, 235, 235);
+  --hover-color: rgb(225, 225, 225);
+  --border-color: rgb(225, 225, 225);
   --text-color: black;
   --font-size: 14px;
   --tile-width: 50px;
@@ -24,6 +24,26 @@ html, body {
 #root {
   height: 100%;
   width: 100%;
+}
+
+.scene {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.menu {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 10px;
+  border-radius: var(--border-radius);
+  z-index: 1000; /* Overlay */
 }
 
 .menu {
