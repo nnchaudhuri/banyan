@@ -4,7 +4,7 @@
   --border-color: rgb(225, 225, 225);
   --text-color: black;
   --font-size: 14px;
-  --tile-width: 50px;
+  --tile-width: 60px;
   --padding: 4px 6px;
   --border: 1px;
   --border-radius: 6px;
@@ -56,10 +56,12 @@ html, body {
   color: var(--text-color);
   text-align: center;
   font-size: var(--font-size);
+  width: var(--tile-width);
   padding: var(--padding);
   border: var(--border) solid var(--border-color);
   border-radius: var(--border-radius);
   margin: var(--margin);
+  box-sizing: border-box;
 }
 
 .button:hover {
@@ -68,9 +70,12 @@ html, body {
 
 .button-wide {
   grid-column: span 2;
+  width: auto;
 }
 
 .int-input {
+  background-color: var(--background-color);
+  color: var(--text-color);
   text-align: center;
   font-size: var(--font-size);
   width: var(--tile-width);
@@ -78,11 +83,11 @@ html, body {
   border: var(--border) solid var(--border-color);
   border-radius: var(--border-radius);
   margin: var(--margin);
+  box-sizing: border-box;
 }
 
 .int-input-button {
   grid-column: span 2;
-  display: flex;
 }
 
 .text {
@@ -93,8 +98,10 @@ html, body {
 
 .text-wide {
   grid-column: span 2;
+  width: auto;
 }
 
 .blank {
+  width: auto;
   height: var(--gap);
 }

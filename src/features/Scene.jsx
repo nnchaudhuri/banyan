@@ -118,26 +118,23 @@ const Scene = () => {
       selectAll: () => tree.selectAll(),
       deselectAll: () => tree.deselectAll(),
       copy: () => tree.copySelected(),
-      delete: () => tree.deleteSelected(),
+      delete: () => tree.formalDeleteSelected(),
       move: () => tree.toggleGizmosSelected(),
       reflect: () => tree.reflectSelected(),
       connections: () => tree.toggleAllConnections(),
       transparency: () => tree.toggleAllTransparency(),
-      addBranch: (length) => {
-        tree.add(new Components.Branch(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], 
-          length, thickBranch, radBranch, radHole, spacHole, lenSlot, 0, numArcPts));
-      }
+      addBranch: (lengths) => tree.add(new Components.Branch(scene, tree, snapDist, snapRot, 
+        [0, 0, 0, 0, 0, 0], 12, thickBranch, radBranch, radHole, spacHole, lenSlot, 0, 
+        numArcPts))
     };
 
     // Event listeners for actions
     Object.keys(actionHandlers).forEach(action => {
-      window.addEventListener(action, (event) => {
-        if (action === 'addBranch') {
-          actionHandlers[action](event.detail.length);
-        } else {
-          actionHandlers[action]();
-        }
-      });
+      if (action === 'addBranch') {
+        window.addEventListener('addBranch', (event) => actionHandlers.addBranch(event.detail));
+      } else {
+        window.addEventListener(action, actionHandlers[action]);
+      }
     });
 
     // Render loop
