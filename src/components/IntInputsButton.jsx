@@ -2,7 +2,6 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 import '../styles/index.css';
 import IntInput from './IntInput';
-import Button from './Button';
 
 const IntInputsButton = ({ eventType, title, min, max, initialValues }) => {
   const [values, setValues] = useState(initialValues);
@@ -16,13 +15,13 @@ const IntInputsButton = ({ eventType, title, min, max, initialValues }) => {
   };
 
   const handleClick = () => {
-    const event = new CustomEvent(eventType, { detail: values });
+    const event = new CustomEvent(eventType, { detail: { values } });
     window.dispatchEvent(event);
   };
 
   return (
-    <div className="int-input-button">
-      <Button onClick={handleClick}>{title}</Button>
+    <div className="int-inputs-button">
+      <button onClick={handleClick} className="button">{title}</button>
       {values.map((value, index) => (
         <IntInput
           key={index}

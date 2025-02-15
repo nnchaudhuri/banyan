@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import '../styles/index.css';
 
-const Text = ({ className, children }) => {
+const Text = ({ className = '', children }) => {
   return (
     <div className={`text ${className}`}>
       {children}
@@ -12,10 +12,6 @@ const Text = ({ className, children }) => {
 Text.propTypes = {
   children: PropTypes.node.isRequired,
   className: PropTypes.string,
-};
-
-Text.defaultProps = {
-  className: '',
 };
 
 export default Text;

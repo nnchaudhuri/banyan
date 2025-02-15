@@ -50,25 +50,15 @@ const Scene = () => {
     });
 
     // Default component properties
-    const lenX = 6; // Leaf length in x-dir
-    const lenY = 4; // Leaf length in y-dir
-
     const radHole = 0.25; // Hole radius
     const spacHole = 2; // Hole center-to-center spacing
-    
-    const angleBend = 90; // Stem bend angle (in degrees)
-    const lenStem = 4; // Stem length from conn. to conn.
     const radStem = radHole; // Stem tube outer radius
     const radFill = 1; // Stem bend fillet radius
     const radConn = radStem/2; // Connection radius
     const lenConn = 0.5; // Connection length
-
-    const lenBranch = 22; // Branch length from end hole to end hole
     const thickBranch = 1; // Branch thickness
     const radBranch = 1; // Branch profile outer radius
     const lenSlot = 6; // Slot hole max length
-
-    const lenTrunk = 22; // Trunk length from end hole to end hole
     const widthTile = 4; // Tile width
     const thickTile = 1; // Tile thickness
     const numRibs = 2; // Ribs count
@@ -123,17 +113,39 @@ const Scene = () => {
       reflect: () => tree.reflectSelected(),
       connections: () => tree.toggleAllConnections(),
       transparency: () => tree.toggleAllTransparency(),
-      addBranch: (lengths) => tree.add(new Components.Branch(scene, tree, snapDist, snapRot, 
-        [0, 0, 0, 0, 0, 0], 12, thickBranch, radBranch, radHole, spacHole, lenSlot, 0, 
-        numArcPts))
+      addTrunk: (values) => {
+        tree.add(new Components.Trunk(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0],
+          values[0], widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, 
+          radHole, spacHole, overhang, 0, numArcPts));
+      },
+      addBranch: (values) => {
+        tree.add(new Components.Branch(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], 
+          values[0], thickBranch, radBranch, radHole, spacHole, lenSlot, 0, numArcPts));
+      },
+      addStem: (values) => {
+        tree.add(new Components.Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], 
+          0, values[0], radStem, radFill, radConn, lenConn, thickBranch, 0, numArcPts, numFillPts));
+      },
+      addLeaf: (values) => {
+        tree.add(new Components.Leaf(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], 
+          values[0], values[1]));
+      },
     };
 
     // Event listeners for actions
     Object.keys(actionHandlers).forEach(action => {
-      if (action === 'addBranch') {
-        window.addEventListener('addBranch', (event) => actionHandlers.addBranch(event.detail));
-      } else {
-        window.addEventListener(action, actionHandlers[action]);
+      switch (action) {
+        case 'addTrunk':
+        case 'addBranch':
+        case 'addStem':
+        case 'addLeaf':
+          window.addEventListener(action, (event) => {
+            actionHandlers[action](event.detail.values);
+          });
+          break;
+        default:
+          window.addEventListener(action, actionHandlers[action]);
+          break;
       }
     });
 

@@ -86,7 +86,7 @@ html, body {
   box-sizing: border-box;
 }
 
-.int-input-button {
+.int-inputs-button {
   grid-column: span 2;
 }
 
