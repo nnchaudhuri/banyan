@@ -28,19 +28,19 @@ const Scene = () => {
     camera.orthoRight = 36;
     const ratio = canvas.height/canvas.width;
     const setOrthoCameraTopBottom = (camera, ratio) => {
-        camera.orthoTop = camera.orthoRight*ratio;
-        camera.orthoBottom = camera.orthoLeft*ratio;
+      camera.orthoTop = camera.orthoRight*ratio;
+      camera.orthoBottom = camera.orthoLeft*ratio;
     }
     setOrthoCameraTopBottom(camera, ratio);
     let oldRadius = camera.radius;
     scene.onBeforeRenderObservable.add(() => {
-        if (oldRadius !== camera.radius) {
-            const radiusChangeRatio = camera.radius/oldRadius;
-            camera.orthoLeft *= radiusChangeRatio;
-            camera.orthoRight *= radiusChangeRatio;
-            oldRadius = camera.radius;
-            setOrthoCameraTopBottom(camera, ratio);
-        }
+      if (oldRadius !== camera.radius) {
+        const radiusChangeRatio = camera.radius/oldRadius;
+        camera.orthoLeft *= radiusChangeRatio;
+        camera.orthoRight *= radiusChangeRatio;
+        oldRadius = camera.radius;
+        setOrthoCameraTopBottom(camera, ratio);
+      }
     });
 
     // Setup light
@@ -77,9 +77,9 @@ const Scene = () => {
     // Create test tree
     let tree = new Collections.Tree(scene, numArcPts, numFillPts, snapDist, snapRot);
     scene.registerBeforeRender(function() {
-        tree.checkIntersections(tree.components);
-        tree.checkConnections(tree.components);
-        tree.updateVisuals(tree.components);
+      tree.checkIntersections(tree.components);
+      tree.checkConnections(tree.components);
+      tree.updateVisuals(tree.components);
     });
 
     /*
@@ -117,56 +117,65 @@ const Scene = () => {
         tree.add(new Components.Trunk(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0],
           values[0], widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, 
           radHole, spacHole, overhang, 0, numArcPts));
+        tree.log();
       },
       addBranch: (values) => {
         tree.add(new Components.Branch(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], 
           values[0], thickBranch, radBranch, radHole, spacHole, lenSlot, 0, numArcPts));
+        tree.log();
       },
       addStem: (values) => {
         tree.add(new Components.Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], 
           0, values[0], radStem, radFill, radConn, lenConn, thickBranch, 0, numArcPts, numFillPts));
+        tree.log();
       },
       addLeaf: (values) => {
         tree.add(new Components.Leaf(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], 
           values[0], values[1]));
+        tree.log();
       },
     };
 
-    // Event listeners for actions
+    // Store listener references for cleanup
+    const eventListeners = {};
     Object.keys(actionHandlers).forEach(action => {
+      let listener;
       switch (action) {
         case 'addTrunk':
         case 'addBranch':
         case 'addStem':
         case 'addLeaf':
-          window.addEventListener(action, (event) => {
+          listener = (event) => {
             actionHandlers[action](event.detail.values);
-          });
+          };
+          window.addEventListener(action, listener);
           break;
         default:
-          window.addEventListener(action, actionHandlers[action]);
+          listener = actionHandlers[action];
+          window.addEventListener(action, listener);
           break;
       }
+      eventListeners[action] = listener;
     });
+
+    // Resize listener stored for removal
+    const resizeListener = () => {
+      engine.resize();
+    };
+    window.addEventListener('resize', resizeListener);
 
     // Render loop
     engine.runRenderLoop(() => {
       scene.render();
     });
 
-    // Resize engine when the window is resized
-    window.addEventListener('resize', () => {
-      engine.resize();
-    });
-
     return () => {
       engine.dispose();
-      Object.keys(actionHandlers).forEach(action => {
-        window.removeEventListener(action, actionHandlers[action]);
+      // Remove action listeners
+      Object.keys(eventListeners).forEach(action => {
+        window.removeEventListener(action, eventListeners[action]);
       });
-      window.removeEventListener('resize', () => {
-        engine.resize();
-      });
+      window.removeEventListener('resize', resizeListener);
     };
   }, []);
 
