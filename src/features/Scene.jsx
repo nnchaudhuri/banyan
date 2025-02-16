@@ -82,23 +82,6 @@ const Scene = () => {
       tree.updateVisuals(tree.components);
     });
 
-    /*
-    // Load example tree from file by default
-    const defaultLoadFile = () => {
-      try {
-        const response = fetch('../assets/myTree.txt');
-        const fileContent = response.text();
-        
-        // Create components per file lines
-        const lines = fileContent.split('\n');
-        tree.expand(lines);
-      } catch (error) {
-        console.error('Failed to load tree from file:', error);
-      }
-    };
-    defaultLoadFile();
-    */
-
     // Action handlers
     const actionHandlers = {
       loadFile: () => tree.load(),
@@ -126,7 +109,7 @@ const Scene = () => {
       },
       addStem: (values) => {
         tree.add(new Components.Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], 
-          0, values[0], radStem, radFill, radConn, lenConn, thickBranch, 0, numArcPts, numFillPts));
+          values[0], values[1], radStem, radFill, radConn, lenConn, thickBranch, 0, numArcPts, numFillPts));
         tree.log();
       },
       addLeaf: (values) => {

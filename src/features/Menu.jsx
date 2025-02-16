@@ -1,5 +1,5 @@
 import '../styles/index.css';
-import { Button, Text, Blank, IntInputsButton } from '../components';
+import { Button, Blank, IntInputsButton } from '../components';
 
 const Menu = () => {
   return (
@@ -16,14 +16,18 @@ const Menu = () => {
       <Button eventType='reflect' title='R'>Reflect</Button>
       <Button eventType='connections' className='button-wide' title='N'>Connections</Button>
       <Button eventType='transparency' className='button-wide' title='T'>Transparency</Button>
-
       <Blank count={2} />
-      <Text>Add</Text>
-      <Text>of Size</Text>
-      <IntInputsButton eventType='addTrunk' title='Trunk' min={2} max={120} initialValues={[24]} />
-      <IntInputsButton eventType='addBranch' title='Branch' min={2} max={120} initialValues={[12]} />
-      <IntInputsButton eventType='addStem' title='Stem' min={2} max={120} initialValues={[4]} />
-      <IntInputsButton eventType='addLeaf' title='Leaf' min={2} max={120} initialValues={[4, 4]} />
+      <IntInputsButton eventType='addTrunk' title='Add Trunk' 
+        labels={['Length']} initialValues={[24]} min={[2]} max={[120]} />
+      <Blank count={2} />
+      <IntInputsButton eventType='addBranch' title='Add Branch' 
+        labels={['Length']} initialValues={[12]} min={[2]} max={[120]} />
+      <Blank count={2} />
+      <IntInputsButton eventType='addStem' title='Add Stem' 
+        labels={['Angle','Length']} initialValues={[0, 4]} min={[0, 2]} max={[90, 48]} />
+      <Blank count={2} />
+      <IntInputsButton eventType='addLeaf' title='Add Leaf'
+        labels={['Length X', 'Length Y']} initialValues={[4, 4]} min={[2, 2]} max={[48, 48]} />
     </div>
   );
 };

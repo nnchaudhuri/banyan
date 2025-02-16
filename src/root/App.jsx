@@ -4,9 +4,9 @@ import '../styles/index.css';
 
 const App = () => {
   return (
-    <div className="scene">
+    <div className='scene'>
       <Scene />
-      <div className="menu">
+      <div className='menu'>
         <Menu />
       </div>
     </div>

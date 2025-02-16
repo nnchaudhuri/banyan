@@ -11,14 +11,14 @@ const IntInput = ({ value, onChange, min, max }) => {
 
   return (
     <input
-      type="number"
+      type='number'
       min={min}
       max={max}
       value={value}
       onChange={handleChange}
-      className="int-input"
-      inputMode="numeric"
-      pattern="[0-9]*"
+      className='int-input'
+      inputMode='numeric'
+      pattern='[0-9]*'
     />
   );
 };

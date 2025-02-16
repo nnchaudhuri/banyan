@@ -44,9 +44,6 @@ html, body {
   padding: 10px;
   border-radius: var(--border-radius);
   z-index: 1000; /* Overlay */
-}
-
-.menu {
   display: grid;
   grid-template-columns: 1fr 1fr;
 }
@@ -88,6 +85,17 @@ html, body {
 
 .int-inputs-button {
   grid-column: span 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.grid-label {
+  grid-column: 1;
+  align-self: center;
+}
+
+.grid-input {
+  grid-column: 2;
 }
 
 .text {

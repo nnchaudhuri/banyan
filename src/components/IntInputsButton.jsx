@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import '../styles/index.css';
 import IntInput from './IntInput';
+import Text from './Text';
 
-const IntInputsButton = ({ eventType, title, min, max, initialValues }) => {
+const IntInputsButton = ({ eventType, title, labels, initialValues, min, max }) => {
   const [values, setValues] = useState(initialValues);
 
   const handleChange = (index, newValue) => {
-    if (newValue >= min && newValue <= max) {
+    if (newValue >= min[index] && newValue <= max[index]) {
       const newValues = [...values];
       newValues[index] = newValue;
       setValues(newValues);
@@ -20,16 +21,23 @@ const IntInputsButton = ({ eventType, title, min, max, initialValues }) => {
   };
 
   return (
-    <div className="int-inputs-button">
-      <button onClick={handleClick} className="button">{title}</button>
+    <div className='int-inputs-button'>
+      <button onClick={handleClick} className='button button-wide'>
+        {title}
+      </button>
       {values.map((value, index) => (
-        <IntInput
-          key={index}
-          value={value}
-          onChange={(newValue) => handleChange(index, newValue)}
-          min={min}
-          max={max}
-        />
+        <React.Fragment key={index}>
+          <Text className='grid-label'>
+            {labels[index]}
+          </Text>
+          <IntInput
+            className='grid-input'
+            value={value}
+            onChange={(newValue) => handleChange(index, newValue)}
+            min={min[index]}
+            max={max[index]}
+          />
+        </React.Fragment>
       ))}
     </div>
   );
@@ -38,9 +46,10 @@ const IntInputsButton = ({ eventType, title, min, max, initialValues }) => {
 IntInputsButton.propTypes = {
   eventType: PropTypes.string.isRequired,
   title: PropTypes.string.isRequired,
-  min: PropTypes.number.isRequired,
-  max: PropTypes.number.isRequired,
+  labels: PropTypes.arrayOf(PropTypes.string).isRequired,
   initialValues: PropTypes.arrayOf(PropTypes.number).isRequired,
+  min: PropTypes.arrayOf(PropTypes.number).isRequired,
+  max: PropTypes.arrayOf(PropTypes.number).isRequired,
 };
 
 export default IntInputsButton;
