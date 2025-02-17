@@ -1,7 +1,7 @@
-import '../styles/index.css';
-import { Button, Blank, IntInputsButton } from '../components';
+import 'styles/index.css';
+import { Button, Blank, IntInputsButton } from 'components';
 
-const Menu = () => {
+export const Menu = () => {
   return (
     <div className='menu'>
       <Button eventType='loadFile' title='L'>Load</Button>
@@ -31,5 +31,3 @@ const Menu = () => {
     </div>
   );
 };
-
-export default Menu;

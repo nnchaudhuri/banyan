@@ -1,6 +1,6 @@
 import * as BABYLON from 'babylonjs';
 import { saveAs } from 'file-saver';
-import * as Components from './components.js';
+import * as Components from 'utils/components.js';
 
 // Define collection class (group of components)
 class Collection {

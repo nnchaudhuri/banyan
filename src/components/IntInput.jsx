@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import '../styles/index.css';
+import 'styles/index.css';
 
 const IntInput = ({ value, onChange, min, max }) => {
   const handleChange = (event) => {

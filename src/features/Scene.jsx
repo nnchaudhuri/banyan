@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import * as BABYLON from 'babylonjs';
-import * as Collections from '../utils/collections.js';
-import * as Components from '../utils/components.js';
+import * as Collections from 'utils/collections.js';
+import * as Components from 'utils/components.js';
 
-const Scene = () => {
+export const Scene = () => {
   useEffect(() => {
     // Create canvas
     const canvas = document.getElementById('scene');
@@ -15,31 +15,39 @@ const Scene = () => {
     const scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(1, 1, 1, 1);
 
-    // Setup orthogonal camera
-    const camera = new BABYLON.ArcRotateCamera('camera', -Math.PI/4, Math.PI/4, 100, 
-      BABYLON.Vector3.Zero());
+    // Setup orthographic camera
+    const camera = new BABYLON.ArcRotateCamera(
+      'camera',
+      -Math.PI / 4, // alpha angle
+      Math.PI / 4, // beta angle
+      100,         // radius
+      BABYLON.Vector3.Zero(),
+      scene
+    );
     camera.attachControl(canvas, true);
-    camera.inputs.attached.keyboard.angularSpeed = 0.005;
+    camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
     camera.minZ = 0.01;
     camera.maxZ = 1000;
     camera.wheelDeltaPercentage = 0.01;
-    camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
     camera.orthoLeft = -36;
     camera.orthoRight = 36;
-    const ratio = canvas.height/canvas.width;
-    const setOrthoCameraTopBottom = (camera, ratio) => {
-      camera.orthoTop = camera.orthoRight*ratio;
-      camera.orthoBottom = camera.orthoLeft*ratio;
-    }
-    setOrthoCameraTopBottom(camera, ratio);
+
+    // Update orthographic camera
+    const updateCameraOrtho = () => {
+      const ratio = canvas.height / canvas.width;
+      camera.orthoTop = camera.orthoRight * ratio;
+      camera.orthoBottom = camera.orthoLeft * ratio;
+    };
+    updateCameraOrtho();
+
     let oldRadius = camera.radius;
-    scene.onBeforeRenderObservable.add(() => {
+    const observer = scene.onBeforeRenderObservable.add(() => {
       if (oldRadius !== camera.radius) {
-        const radiusChangeRatio = camera.radius/oldRadius;
+        const radiusChangeRatio = camera.radius / oldRadius;
         camera.orthoLeft *= radiusChangeRatio;
         camera.orthoRight *= radiusChangeRatio;
         oldRadius = camera.radius;
-        setOrthoCameraTopBottom(camera, ratio);
+        updateCameraOrtho();
       }
     });
 
@@ -144,6 +152,7 @@ const Scene = () => {
     // Resize listener stored for removal
     const resizeListener = () => {
       engine.resize();
+      updateCameraOrtho();
     };
     window.addEventListener('resize', resizeListener);
 
@@ -158,11 +167,10 @@ const Scene = () => {
       Object.keys(eventListeners).forEach(action => {
         window.removeEventListener(action, eventListeners[action]);
       });
+      scene.onBeforeRenderObservable.remove(observer);
       window.removeEventListener('resize', resizeListener);
     };
   }, []);
 
   return <canvas id='scene' style={{ width: '100%', height: '100%' }} />;
 };
-
-export default Scene;

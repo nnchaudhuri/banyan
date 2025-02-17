@@ -1,8 +1,8 @@
-import Scene from '../features/Scene.jsx';
-import Menu from '../features/Menu.jsx';
-import '../styles/index.css';
+import { Scene } from 'features/Scene.jsx';
+import { Menu } from 'features/Menu.jsx';
+import 'styles/index.css';
 
-const App = () => {
+export const App = () => {
   return (
     <div className='scene'>
       <Scene />
@@ -12,5 +12,3 @@ const App = () => {
     </div>
   );
 };
-
-export default App;

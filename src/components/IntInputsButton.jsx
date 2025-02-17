@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import '../styles/index.css';
-import IntInput from './IntInput';
-import Text from './Text';
+import 'styles/index.css';
+import IntInput from 'components/IntInput';
+import Text from 'components/Text';
 
 const IntInputsButton = ({ eventType, title, labels, initialValues, min, max }) => {
   const [values, setValues] = useState(initialValues);

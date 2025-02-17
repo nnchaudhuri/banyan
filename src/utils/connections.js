@@ -1,6 +1,6 @@
 import * as BABYLON from 'babylonjs';
 import earcut from 'earcut';
-import * as Geometry from './geometry.js';
+import * as Geometry from 'utils/geometry.js';
 
 // Define connection class
 class Connection {

@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import '../styles/index.css';
+import 'styles/index.css';
 
 const Blank = ({ count = 1 }) => {
   const blanks = Array.from({ length: count }, (_, index) => (
