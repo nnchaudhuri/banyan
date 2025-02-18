@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import 'styles/index.css';
-import IntInput from 'components/IntInput';
-import Text from 'components/Text';
+import { IntInput } from 'components/IntInput';
+import { Text } from 'components/Text';
 
-const IntInputsButton = ({ eventType, title, labels, initialValues, min, max }) => {
+export const IntInputsButton = ({ eventType, title, labels, initialValues, min, max }) => {
   const [values, setValues] = useState(initialValues);
 
   const handleChange = (index, newValue) => {
@@ -51,5 +51,3 @@ IntInputsButton.propTypes = {
   min: PropTypes.arrayOf(PropTypes.number).isRequired,
   max: PropTypes.arrayOf(PropTypes.number).isRequired,
 };
-
-export default IntInputsButton;

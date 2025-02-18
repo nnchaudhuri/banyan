@@ -104,6 +104,19 @@ export const Scene = () => {
       reflect: () => tree.reflectSelected(),
       connections: () => tree.toggleAllConnections(),
       transparency: () => tree.toggleAllTransparency(),
+      loadExample: ({ file }) => {
+        fetch('assets/examples/' + file)
+          .then(response => response.text())
+          .then(text => {
+            const lines = text.split('\n');
+            tree.expand(lines);
+            tree.delete(tree.components.slice(0, tree.components.length));
+            tree.log();
+          })
+          .catch(error => {
+            console.error('Error loading example file:', error);
+          });
+      },
       addTrunk: (values) => {
         tree.add(new Components.Trunk(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0],
           values[0], widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, 

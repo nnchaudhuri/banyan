@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import 'styles/index.css';
 
-const Button = ({ eventType = '', className = '', title = '', children }) => {
+export const Button = ({ eventType = '', className = '', title = '', children }) => {
   const handleEvent = () => {
     const event = new Event(eventType);
     window.dispatchEvent(event);
@@ -20,5 +20,3 @@ Button.propTypes = {
   title: PropTypes.string,
   children: PropTypes.node.isRequired,
 };
-
-export default Button;

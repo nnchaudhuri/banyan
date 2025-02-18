@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import 'styles/index.css';
 
-const IntInput = ({ value, onChange, min, max }) => {
+export const IntInput = ({ value, onChange, min, max }) => {
   const handleChange = (event) => {
     const newValue = parseInt(event.target.value, 10);
     if (!isNaN(newValue) && newValue >= min && newValue <= max) {
@@ -29,5 +29,3 @@ IntInput.propTypes = {
   min: PropTypes.number.isRequired,
   max: PropTypes.number.isRequired,
 };
-
-export default IntInput;
