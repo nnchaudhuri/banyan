@@ -5,6 +5,7 @@ import { Button, Blank, IntInputsButton, FileSelectButton } from 'components';
 export const Menu = () => {
   const menuRef = useRef(null);
 
+  // Scale menu per browser resizing
   useEffect(() => {
     const scaleMenu = () => {
       if (menuRef.current) {
@@ -15,18 +16,18 @@ export const Menu = () => {
         menuRef.current.style.transformOrigin = 'top left';
       }
     };
-
     scaleMenu();
     window.addEventListener('resize', scaleMenu);
     return () => window.removeEventListener('resize', scaleMenu);
   }, []);
 
+  // Render menu layout
   return (
     <div className='menu' ref={menuRef}>
       <Button eventType='loadFile' title='L'>Load</Button>
       <Button eventType='saveFile' title='S'>Save</Button>
       <FileSelectButton eventType='loadExample' title='Load Example'
-        files={['myTree.txt', 'myTree2.txt']} />
+        files={['chair.txt', 'table.txt']} path='examples' />
       <Blank count={2} />
       <Button eventType='undo' title='['>Undo</Button>
       <Button eventType='redo' title=']'>Redo</Button>
@@ -40,16 +41,16 @@ export const Menu = () => {
       <Button eventType='transparency' className='button-wide' title='T'>Transparency</Button>
       <Blank count={2} />
       <IntInputsButton eventType='addTrunk' title='Add Trunk' 
-        labels={['Length']} initialValues={[24]} min={[2]} max={[120]} />
+        labels={['Length']} initialValues={[24]} min={[0]} max={[120]} />
       <Blank count={2} />
       <IntInputsButton eventType='addBranch' title='Add Branch' 
-        labels={['Length']} initialValues={[12]} min={[2]} max={[120]} />
+        labels={['Length']} initialValues={[12]} min={[0]} max={[120]} />
       <Blank count={2} />
       <IntInputsButton eventType='addStem' title='Add Stem' 
-        labels={['Angle','Length']} initialValues={[0, 4]} min={[0, 2]} max={[90, 48]} />
+        labels={['Angle','Length']} initialValues={[0, 4]} min={[0, 1]} max={[90, 48]} />
       <Blank count={2} />
       <IntInputsButton eventType='addLeaf' title='Add Leaf'
-        labels={['Length X', 'Length Y']} initialValues={[4, 4]} min={[2, 2]} max={[48, 48]} />
+        labels={['Length X', 'Length Y']} initialValues={[4, 4]} min={[1, 1]} max={[48, 48]} />
     </div>
   );
 };

@@ -577,7 +577,7 @@ class Tree extends Collection {
     // Load tree file
     async load() {
         // Store previous tree length
-        let num = this.components.length;
+        let prevLength = this.components.length;
     
         // Process file from local browser
         const input = document.createElement('input');
@@ -597,7 +597,7 @@ class Tree extends Collection {
                         this.expand(lines);
 
                         // Clear previous tree
-                        this.delete(this.components.slice(0, num));
+                        this.delete(this.components.slice(0, prevLength));
 
                         resolve();
                     };

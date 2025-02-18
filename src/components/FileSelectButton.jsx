@@ -2,7 +2,7 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 import 'styles/index.css';
 
-export const FileSelectButton = ({ eventType, title, files }) => {
+export const FileSelectButton = ({ eventType, title, files, path = ''}) => {
   const [selectedFile, setSelectedFile] = useState(files[0]);
 
   const handleFileChange = (e) => {
@@ -10,8 +10,17 @@ export const FileSelectButton = ({ eventType, title, files }) => {
   };
 
   const handleClick = () => {
-    const customEvent = new CustomEvent(eventType, { detail: { file: selectedFile } });
-    window.dispatchEvent(customEvent);
+    fetch(path + '/' + selectedFile)
+      .then((response) => response.text())
+      .then((text) => {
+        const customEvent = new CustomEvent(eventType, {
+          detail: { file: selectedFile, text: text }
+        });
+        window.dispatchEvent(customEvent);
+      })
+      .catch((error) => {
+        console.error('Error reading file text:', error);
+      });
   };
 
   return (
@@ -34,4 +43,5 @@ FileSelectButton.propTypes = {
   eventType: PropTypes.string.isRequired,
   title: PropTypes.string.isRequired,
   files: PropTypes.arrayOf(PropTypes.string).isRequired,
+  path: PropTypes.string,
 };

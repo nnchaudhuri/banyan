@@ -37,10 +37,9 @@ html, body {
 }
 
 .menu {
-  max-height: 100vh;
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: var(--gap);
+  left: var(--gap);
   background-color: rgba(255, 255, 255, 0.8);
   padding: 10px;
   border-radius: var(--border-radius);

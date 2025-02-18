@@ -53,8 +53,8 @@ export const Scene = () => {
 
     // Setup light
     const light = new BABYLON.HemisphericLight('hemiLight', new BABYLON.Vector3(0, 50, 0));
-    scene.registerBeforeRender(function () {
-        light.direction = camera.position;
+    scene.registerBeforeRender(() => {
+      light.direction = camera.position;
     });
 
     // Default component properties
@@ -62,7 +62,7 @@ export const Scene = () => {
     const spacHole = 2; // Hole center-to-center spacing
     const radStem = radHole; // Stem tube outer radius
     const radFill = 1; // Stem bend fillet radius
-    const radConn = radStem/2; // Connection radius
+    const radConn = radStem / 2; // Connection radius
     const lenConn = 0.5; // Connection length
     const thickBranch = 1; // Branch thickness
     const radBranch = 1; // Branch profile outer radius
@@ -84,7 +84,7 @@ export const Scene = () => {
 
     // Create test tree
     let tree = new Collections.Tree(scene, numArcPts, numFillPts, snapDist, snapRot);
-    scene.registerBeforeRender(function() {
+    scene.registerBeforeRender(() => {
       tree.checkIntersections(tree.components);
       tree.checkConnections(tree.components);
       tree.updateVisuals(tree.components);
@@ -104,37 +104,31 @@ export const Scene = () => {
       reflect: () => tree.reflectSelected(),
       connections: () => tree.toggleAllConnections(),
       transparency: () => tree.toggleAllTransparency(),
-      loadExample: ({ file }) => {
-        fetch('assets/examples/' + file)
-          .then(response => response.text())
-          .then(text => {
-            const lines = text.split('\n');
-            tree.expand(lines);
-            tree.delete(tree.components.slice(0, tree.components.length));
-            tree.log();
-          })
-          .catch(error => {
-            console.error('Error loading example file:', error);
-          });
+      loadExample: ({ text }) => {
+        const lines = text.split('\n');
+        const prevLength = tree.components.length;
+        tree.expand(lines);
+        tree.delete(tree.components.slice(0, prevLength));
+        tree.log();
       },
-      addTrunk: (values) => {
+      addTrunk: ({ values }) => {
         tree.add(new Components.Trunk(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0],
-          values[0], widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib, 
+          values[0], widthTile, thickTile, numRibs, thickRib, radRib, spacRib, edgeRib,
           radHole, spacHole, overhang, 0, numArcPts));
         tree.log();
       },
-      addBranch: (values) => {
-        tree.add(new Components.Branch(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], 
+      addBranch: ({ values }) => {
+        tree.add(new Components.Branch(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0],
           values[0], thickBranch, radBranch, radHole, spacHole, lenSlot, 0, numArcPts));
         tree.log();
       },
-      addStem: (values) => {
-        tree.add(new Components.Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], 
+      addStem: ({ values }) => {
+        tree.add(new Components.Stem(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0],
           values[0], values[1], radStem, radFill, radConn, lenConn, thickBranch, 0, numArcPts, numFillPts));
         tree.log();
       },
-      addLeaf: (values) => {
-        tree.add(new Components.Leaf(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0], 
+      addLeaf: ({ values }) => {
+        tree.add(new Components.Leaf(scene, tree, snapDist, snapRot, [0, 0, 0, 0, 0, 0],
           values[0], values[1]));
         tree.log();
       },
@@ -142,15 +136,16 @@ export const Scene = () => {
 
     // Store listener references for cleanup
     const eventListeners = {};
-    Object.keys(actionHandlers).forEach(action => {
+    Object.keys(actionHandlers).forEach((action) => {
       let listener;
       switch (action) {
+        case 'loadExample':
         case 'addTrunk':
         case 'addBranch':
         case 'addStem':
         case 'addLeaf':
           listener = (event) => {
-            actionHandlers[action](event.detail.values);
+            actionHandlers[action](event.detail);
           };
           window.addEventListener(action, listener);
           break;
@@ -162,7 +157,7 @@ export const Scene = () => {
       eventListeners[action] = listener;
     });
 
-    // Resize listener stored for removal
+    // Resize listener for engine and camera
     const resizeListener = () => {
       engine.resize();
       updateCameraOrtho();
@@ -176,8 +171,8 @@ export const Scene = () => {
 
     return () => {
       engine.dispose();
-      // Remove action listeners
-      Object.keys(eventListeners).forEach(action => {
+      // Remove all event listeners
+      Object.keys(eventListeners).forEach((action) => {
         window.removeEventListener(action, eventListeners[action]);
       });
       scene.onBeforeRenderObservable.remove(observer);
