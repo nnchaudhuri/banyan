@@ -1,8 +1,8 @@
 import * as BABYLON from 'babylonjs';
 import earcut from 'earcut';
-import * as Geometry from 'utils/geometry.js';
-import * as Elements from 'utils/elements.js';
-import * as Connections from 'utils/connections.js';
+import * as Geometry from 'domain/geometry.js';
+import * as Elements from 'domain/elements.js';
+import * as Connections from 'domain/connections.js';
 
 // Define component class
 class Component {

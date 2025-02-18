@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import * as BABYLON from 'babylonjs';
-import * as Collections from 'utils/collections.js';
-import * as Components from 'utils/components.js';
+import * as Collections from 'domain/collections.js';
+import * as Components from 'domain/components.js';
 
 export const Scene = () => {
   useEffect(() => {
