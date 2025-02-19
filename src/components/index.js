@@ -4,3 +4,4 @@ export { Text } from 'components/Text';
 export { Blank } from 'components/Blank';
 export { IntInputsButton } from 'components/IntInputsButton';
 export { FileSelectButton } from 'components/FileSelectButton';
+export { ScaledToWindowHeight } from 'components/ScaledToWindowHeight';

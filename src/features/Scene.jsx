@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useOnMount } from 'utils/useOnMount';
 import * as BABYLON from 'babylonjs';
 import * as Collections from 'domain/collections.js';
 import * as Components from 'domain/components.js';
 
 export const Scene = () => {
-  useEffect(() => {
+  useOnMount(() => {
     // Create canvas
     const canvas = document.getElementById('scene');
 
@@ -178,7 +178,7 @@ export const Scene = () => {
       scene.onBeforeRenderObservable.remove(observer);
       window.removeEventListener('resize', resizeListener);
     };
-  }, []);
+  });
 
   return <canvas id='scene' style={{ width: '100%', height: '100%' }} />;
 };
