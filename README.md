@@ -1,2 +1,0 @@
-# banyan
-Modular furniture design
